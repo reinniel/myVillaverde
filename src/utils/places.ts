@@ -210,3 +210,163 @@ export const formatDistance = (distanceMeters: number) => {
   const kilometers = distanceMeters / 1000;
   return `${kilometers < 10 ? kilometers.toFixed(1) : Math.round(kilometers)} km`;
 };
+
+export type OpeningHoursState = 'open' | 'closed' | 'check' | 'unknown';
+
+export interface OpeningHoursSummary {
+  state: OpeningHoursState;
+  label: string;
+  detail: string;
+}
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
+
+const expandWeekdays = (value: string) => {
+  const indexes = new Set<number>();
+
+  value.split(',').forEach((token) => {
+    const [startName, endName] = token.trim().split(/\s*-\s*/);
+    const startIndex = WEEKDAYS.findIndex((day) => day.toLowerCase() === startName?.slice(0, 3).toLowerCase());
+    const endIndex = endName
+      ? WEEKDAYS.findIndex((day) => day.toLowerCase() === endName.slice(0, 3).toLowerCase())
+      : startIndex;
+    if (startIndex < 0 || endIndex < 0) return;
+
+    let index = startIndex;
+    indexes.add(index);
+    while (index !== endIndex) {
+      index = (index + 1) % WEEKDAYS.length;
+      indexes.add(index);
+    }
+  });
+
+  return Array.from(indexes);
+};
+
+const parse24HourTime = (value: string) => {
+  const match = value.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (minutes > 59 || hours > 24 || (hours === 24 && minutes !== 0)) return null;
+  return (hours * 60) + minutes;
+};
+
+interface WeeklyHoursWindow {
+  days: number[];
+  start: number;
+  end: number;
+}
+
+const parseWeeklyHours = (value: string) => {
+  const windows: WeeklyHoursWindow[] = [];
+  let recognizedSegments = 0;
+
+  value.split(';').forEach((segment) => {
+    const match = segment.trim().match(/^([A-Za-z]{3,9}(?:\s*-\s*[A-Za-z]{3,9})?(?:\s*,\s*[A-Za-z]{3,9})*)\s+(.+)$/);
+    if (!match) return;
+
+    const days = expandWeekdays(match[1]);
+    if (days.length === 0) return;
+    const hoursText = match[2].trim();
+    if (/^closed$/i.test(hoursText)) {
+      recognizedSegments += 1;
+      return;
+    }
+
+    const timeMatch = hoursText.match(/^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/);
+    if (!timeMatch) return;
+    const start = parse24HourTime(timeMatch[1]);
+    const end = parse24HourTime(timeMatch[2]);
+    if (start === null || end === null) return;
+
+    recognizedSegments += 1;
+    windows.push({ days, start, end });
+  });
+
+  return recognizedSegments > 0 ? windows : null;
+};
+
+const getVillaverdeClock = (date: Date) => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Manila',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+  const read = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value || '';
+
+  return {
+    weekday: WEEKDAYS.findIndex((day) => day === read('weekday').slice(0, 3)),
+    minutes: (Number(read('hour')) * 60) + Number(read('minute')),
+  };
+};
+
+export const getOpeningHoursSummary = (openingHours: string, now = new Date()): OpeningHoursSummary => {
+  const value = openingHours.trim();
+  if (!value) {
+    return {
+      state: 'unknown',
+      label: 'Hours unavailable',
+      detail: 'Confirm opening hours before visiting.',
+    };
+  }
+
+  if (/^open 24 hours$/i.test(value)) {
+    return {
+      state: 'open',
+      label: 'Open 24 hours',
+      detail: value,
+    };
+  }
+
+  const weeklyHours = parseWeeklyHours(value);
+  if (!weeklyHours) {
+    return {
+      state: 'check',
+      label: 'Check current hours',
+      detail: value,
+    };
+  }
+
+  const clock = getVillaverdeClock(now);
+  const previousWeekday = (clock.weekday - 1 + WEEKDAYS.length) % WEEKDAYS.length;
+  const isOpen = weeklyHours.some((window) => {
+    if (window.end > window.start) {
+      return window.days.includes(clock.weekday)
+        && clock.minutes >= window.start
+        && clock.minutes < window.end;
+    }
+
+    return (window.days.includes(clock.weekday) && clock.minutes >= window.start)
+      || (window.days.includes(previousWeekday) && clock.minutes < window.end);
+  });
+
+  return {
+    state: isOpen ? 'open' : 'closed',
+    label: isOpen ? 'Open now' : 'Closed now',
+    detail: value,
+  };
+};
+
+export const formatWebsiteLabel = (value: string) => {
+  try {
+    return new URL(value).hostname.replace(/^www\./, '');
+  } catch {
+    return value;
+  }
+};
+
+export const formatCheckedDate = (value: string) => {
+  if (!value) return '';
+  const date = new Date(`${value}T00:00:00+08:00`);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Manila',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(date);
+};

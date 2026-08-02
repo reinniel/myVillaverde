@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import {
-  AlertTriangle, ArrowLeft, Bookmark, Camera, Check, Clock3, Database, ExternalLink,
-  Globe2, ImageOff, Images, MapPin, Navigation, Phone, RefreshCw, Share2, ShieldCheck,
+  AlertTriangle, ArrowLeft, Bookmark, Camera, Check, ChevronRight, Clock3, Database,
+  ExternalLink, Globe2, ImageOff, Images, MapPin, Navigation, Phone, RefreshCw,
+  Share2, ShieldCheck,
 } from 'lucide-react';
 import type { Barangay, PlaceRecord, PlacesDataState, UserLocation } from '../types/app';
 import { CATEGORY_MARKER_COLORS } from '../data/categories';
 import { PhotoGallery } from '../components/PhotoGallery';
-import { formatDistance, getApprovedPhotoUrls, getDirectionsUrl, getDistanceMeters } from '../utils/places';
+import {
+  formatCheckedDate, formatDistance, formatWebsiteLabel, getApprovedPhotoUrls,
+  getDirectionsUrl, getDistanceMeters, getOpeningHoursSummary,
+} from '../utils/places';
 import { buildPlacePageUrl } from '../utils/placeNavigation';
 
 export interface PlacePageProps {
@@ -16,9 +20,66 @@ export interface PlacePageProps {
   loadMessage: string;
   isSaved: boolean;
   userLocation: UserLocation | null;
+  places: PlaceRecord[];
   onBack: () => void;
+  onOpenPlace: (place: PlaceRecord) => void;
   onToggleSaved: (place: PlaceRecord) => void;
 }
+
+interface PlaceSuggestion {
+  place: PlaceRecord;
+  distanceMeters: number;
+}
+
+interface RecommendationSectionProps {
+  title: string;
+  subtitle: string;
+  suggestions: PlaceSuggestion[];
+  emptyMessage: string;
+  onOpenPlace: (place: PlaceRecord) => void;
+}
+
+const RecommendationSection: React.FC<RecommendationSectionProps> = ({
+  title,
+  subtitle,
+  suggestions,
+  emptyMessage,
+  onOpenPlace,
+}) => (
+  <section className="mt-5">
+    <div className="px-1">
+      <h2 className="font-serif-header text-xl font-bold text-[#18241F]">{title}</h2>
+      <p className="mt-1 text-xs font-semibold leading-5 text-[#748078]">{subtitle}</p>
+    </div>
+    {suggestions.length > 0 ? (
+      <div className="mt-3 space-y-2.5">
+        {suggestions.map(({ place, distanceMeters }) => (
+          <button
+            key={place.id}
+            type="button"
+            onClick={() => onOpenPlace(place)}
+            className="flex w-full items-center gap-3 rounded-[22px] border border-[#D9E0D8] bg-[#FFFDF7] p-3 text-left shadow-xs transition active:scale-[0.99] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20"
+            aria-label={`Open ${place.name} place page`}
+          >
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-white shadow-sm" style={{ backgroundColor: CATEGORY_MARKER_COLORS[place.categoryId] }}>
+              <MapPin className="h-5 w-5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-extrabold text-[#26372F]">{place.name}</span>
+              <span className="mt-0.5 block truncate text-xs font-medium text-[#748078]">{place.subcategory} · {place.barangay}</span>
+            </span>
+            <span className="shrink-0 text-right">
+              <span className="block text-[10px] font-extrabold uppercase tracking-[0.08em] text-[#748078]">{formatDistance(distanceMeters)}</span>
+              <ChevronRight className="ml-auto mt-1 h-4 w-4 text-[#9AA49C]" />
+            </span>
+          </button>
+        ))}
+      </div>
+    ) : (
+      <div className="mt-3 rounded-[22px] border border-dashed border-[#CBD4CC] bg-[#F6F8F2] px-5 py-4 text-sm font-semibold leading-6 text-[#748078]">{emptyMessage}</div>
+    )}
+  </section>
+);
 
 export const PlacePage: React.FC<PlacePageProps> = ({
   place,
@@ -27,7 +88,9 @@ export const PlacePage: React.FC<PlacePageProps> = ({
   loadMessage,
   isSaved,
   userLocation,
+  places,
   onBack,
+  onOpenPlace,
   onToggleSaved,
 }) => {
   const [shareState, setShareState] = useState<'idle' | 'copied'>('idle');
@@ -110,6 +173,27 @@ export const PlacePage: React.FC<PlacePageProps> = ({
   const primaryExternalLabel = place.website ? 'Website' : 'Source';
   const coverPhotoUrl = coverPhotoFailed ? '' : (approvedPhotoUrls[coverPhotoIndex] || '');
   const photoFallbackLabel = approvedPhotoUrls.length > 0 ? 'Photo unavailable' : 'No approved photo';
+  const openingHours = getOpeningHoursSummary(place.openingHours);
+  const openingHoursTone = {
+    open: 'bg-[#DDEBDF] text-[#2B6A4E]',
+    closed: 'bg-[#F6E2DC] text-[#974A3B]',
+    check: 'bg-[#FFF0D8] text-[#8A5726]',
+    unknown: 'bg-[#E8ECE7] text-[#627066]',
+  }[openingHours.state];
+  const rankByDistance = (candidates: PlaceRecord[]) => candidates
+    .map((candidate) => ({
+      place: candidate,
+      distanceMeters: getDistanceMeters(place, candidate),
+    }))
+    .sort((first, second) => first.distanceMeters - second.distanceMeters);
+  const otherPlaces = places.filter((candidate) => candidate.id !== place.id);
+  const relatedPlaces = rankByDistance(
+    otherPlaces.filter((candidate) => candidate.categoryId === place.categoryId),
+  ).slice(0, 3);
+  const relatedPlaceIds = new Set(relatedPlaces.map(({ place: relatedPlace }) => relatedPlace.id));
+  const nearbyPlaces = rankByDistance(
+    otherPlaces.filter((candidate) => !relatedPlaceIds.has(candidate.id)),
+  ).slice(0, 3);
 
   return (
     <>
@@ -177,6 +261,7 @@ export const PlacePage: React.FC<PlacePageProps> = ({
 
         <div className="mt-4 flex flex-wrap items-center gap-2" aria-label="Listing status">
           <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-extrabold ${isVerified ? 'bg-[#DDEBDF] text-[#2B6A4E]' : 'bg-[#FFF0D8] text-[#8A5726]'}`}>{isVerified ? <ShieldCheck className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}{isVerified ? 'Verified location' : 'Needs local confirmation'}</span>
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-extrabold ${openingHoursTone}`}><Clock3 className="h-3.5 w-3.5" />{openingHours.label}</span>
           <span className="rounded-full bg-[#FFFDF7] px-3 py-1.5 text-[11px] font-extrabold text-[#627066] shadow-xs">{dataState === 'live' ? 'Live database' : dataState === 'offline' ? 'Offline data' : dataState === 'snapshot' ? 'Snapshot data' : 'Loading database'}</span>
           {distance !== null && <span className="rounded-full bg-[#FFFDF7] px-3 py-1.5 text-[11px] font-extrabold text-[#627066] shadow-xs">{formatDistance(distance)} away</span>}
         </div>
@@ -202,15 +287,42 @@ export const PlacePage: React.FC<PlacePageProps> = ({
         <section className="mt-4 overflow-hidden rounded-[28px] border border-[#D9E0D8] bg-[#FFFDF7] shadow-xs">
           <div className="border-b border-[#E2E7DF] px-5 py-4"><h2 className="font-serif-header text-xl font-bold text-[#18241F]">Place details</h2></div>
           <div className="divide-y divide-[#E7EAE3] px-5">
-            <div className="flex items-start gap-3 py-4"><Clock3 className="mt-0.5 h-5 w-5 shrink-0" style={{ color: accent }} /><div><p className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#89928A]">Opening hours</p><p className="mt-1 text-sm font-bold leading-5 text-[#35463E]">{place.openingHours || 'Hours unavailable'}</p></div></div>
+            <div className="flex items-start gap-3 py-4">
+              <Clock3 className="mt-0.5 h-5 w-5 shrink-0" style={{ color: accent }} />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#89928A]">Opening hours</p>
+                  <span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold ${openingHoursTone}`}>{openingHours.label}</span>
+                </div>
+                <p className="mt-1.5 whitespace-pre-wrap text-sm font-bold leading-5 text-[#35463E]">{openingHours.detail}</p>
+                {openingHours.state === 'check' && <p className="mt-1 text-xs font-medium leading-5 text-[#89928A]">Hours can change. Check the current listing or call before visiting.</p>}
+              </div>
+            </div>
             <div className="flex items-start gap-3 py-4"><MapPin className="mt-0.5 h-5 w-5 shrink-0" style={{ color: accent }} /><div><p className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#89928A]">Address</p><p className="mt-1 text-sm font-bold leading-5 text-[#35463E]">{place.address || `${place.barangay}, Villaverde, Nueva Vizcaya`}</p></div></div>
             {place.phone && <div className="flex items-start gap-3 py-4"><Phone className="mt-0.5 h-5 w-5 shrink-0" style={{ color: accent }} /><div><p className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#89928A]">Phone</p><p className="mt-1 text-sm font-bold leading-5 text-[#35463E]">{place.phone}</p></div></div>}
-            <div className="flex items-start gap-3 py-4"><Database className="mt-0.5 h-5 w-5 shrink-0" style={{ color: accent }} /><div><p className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#89928A]">Database</p><p className="mt-1 text-sm font-bold leading-5 text-[#35463E]">{place.verificationSource || 'myVillaverde Places Database'}{place.lastChecked ? ` · Last checked ${place.lastChecked}` : ''}</p></div></div>
+            {place.website && <div className="flex items-start gap-3 py-4"><Globe2 className="mt-0.5 h-5 w-5 shrink-0" style={{ color: accent }} /><div className="min-w-0"><p className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#89928A]">Website</p><a href={place.website} target="_blank" rel="noreferrer" className="mt-1 inline-flex max-w-full items-center gap-1.5 text-sm font-bold leading-5 text-[#35463E] underline decoration-[#B8C4BA] underline-offset-4"><span className="truncate">{formatWebsiteLabel(place.website)}</span><ExternalLink className="h-3.5 w-3.5 shrink-0" /></a></div></div>}
+            <div className="flex items-start gap-3 py-4"><Database className="mt-0.5 h-5 w-5 shrink-0" style={{ color: accent }} /><div><p className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#89928A]">Verification source</p><p className="mt-1 text-sm font-bold leading-5 text-[#35463E]">{place.verificationSource || 'Source not documented'}</p></div></div>
+            <div className="flex items-start gap-3 py-4"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" style={{ color: accent }} /><div><p className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#89928A]">Listing status</p><p className="mt-1 text-sm font-bold leading-5 text-[#35463E]">{place.status || 'Needs Checking'}{place.lastChecked ? ` · Checked ${formatCheckedDate(place.lastChecked)}` : ' · Check date unavailable'}</p></div></div>
           </div>
         </section>
 
         {place.notes && <section className="mt-4 rounded-[24px] bg-[#F7F2E7] p-5"><h2 className="text-sm font-extrabold text-[#35463E]">Listing notes</h2><p className="mt-2 whitespace-pre-wrap text-sm font-medium leading-6 text-[#627066] [overflow-wrap:anywhere]">{place.notes}</p></section>}
         {!isVerified && <section className="mt-4 flex items-start gap-3 rounded-[24px] border border-[#E7C98D] bg-[#FFF6E6] p-5 text-[#85501D]"><AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" /><div><h2 className="text-sm font-extrabold">Use this listing as a guide</h2><p className="mt-1 text-sm font-medium leading-6">This place still needs local confirmation. Details may change before the database is updated.</p></div></section>}
+
+        <RecommendationSection
+          title="Related places"
+          subtitle={`More ${place.category.toLowerCase()} listings, ordered by distance.`}
+          suggestions={relatedPlaces}
+          emptyMessage="No other places in this category are listed yet."
+          onOpenPlace={onOpenPlace}
+        />
+        <RecommendationSection
+          title="Nearby places"
+          subtitle={`Other useful places closest to ${place.name}.`}
+          suggestions={nearbyPlaces}
+          emptyMessage="No additional nearby places are available in the current database."
+          onOpenPlace={onOpenPlace}
+        />
 
         <button type="button" onClick={onBack} className="mt-5 w-full rounded-full border border-[#D1DAD2] bg-[#FFFDF7] px-5 py-3.5 text-sm font-extrabold text-[#35463E] shadow-sm transition active:scale-[0.99] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20">Back</button>
       </div>

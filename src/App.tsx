@@ -242,7 +242,9 @@ export default function App() {
             loadMessage={placesLoadMessage}
             isSaved={Boolean(placePage && savedPlaces.some((savedPlace) => savedPlace.id === placePage.id))}
             userLocation={userLocation}
+            places={places}
             onBack={closePlacePage}
+            onOpenPlace={openPlacePage}
             onToggleSaved={handleToggleSavedPlace}
           />
         ) : mapScope ? (
