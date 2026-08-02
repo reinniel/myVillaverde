@@ -13,6 +13,7 @@ export interface LocalDashboardProps {
   onOpenMap: () => void;
   onOpenModal: (modal: Exclude<ModalId, null>) => void;
   onOpenCategory: (category: GuideCategory) => void;
+  onOpenPlace: (placeId: string) => void;
 }
 
 export const LocalDashboard: React.FC<LocalDashboardProps> = ({
@@ -22,6 +23,7 @@ export const LocalDashboard: React.FC<LocalDashboardProps> = ({
   onOpenMap,
   onOpenModal,
   onOpenCategory,
+  onOpenPlace,
 }) => (
   <main className="space-y-4 px-4 pb-[max(3rem,env(safe-area-inset-bottom))] pt-3">
     <section>
@@ -96,7 +98,7 @@ export const LocalDashboard: React.FC<LocalDashboardProps> = ({
             return (
               <React.Fragment key={place.id}>
                 {index > 0 && <div className="border-t border-[#E2E6DF]" />}
-                <button type="button" onClick={() => onOpenCategory(category)} className="group -mx-4 flex w-[calc(100%+2rem)] items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-[#F6F3E9]/90 active:bg-[#F0EEE5] focus:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-[#2B6A4E]/20">
+                <button type="button" onClick={() => onOpenPlace(place.id)} aria-label={`Open ${place.name}`} className="group -mx-4 flex w-[calc(100%+2rem)] items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-[#F6F3E9]/90 active:bg-[#F0EEE5] focus:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-[#2B6A4E]/20">
                   <div className="flex min-w-0 items-center gap-3">
                     <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-2xl border ${category.tone}`}>
                       <Icon className="h-5 w-5" />

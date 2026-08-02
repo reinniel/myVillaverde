@@ -144,12 +144,22 @@ export default function App() {
     });
   };
 
-  const openPlacePage = (place: PlaceRecord) => {
+  const navigateToPlacePage = (placeId: string) => {
     setActiveModal(null);
-    rememberRecentlyViewedPlace(place);
-    window.history.pushState({ ...window.history.state, myVillaverdePlaceEntry: true, placeId: place.id }, '', buildPlacePageUrl(place.id));
-    setPlacePageId(place.id);
+    window.history.pushState({ ...window.history.state, myVillaverdePlaceEntry: true, placeId }, '', buildPlacePageUrl(placeId));
+    setPlacePageId(placeId);
     window.scrollTo({ top: 0, behavior: 'auto' });
+  };
+
+  const openPlacePage = (place: PlaceRecord) => {
+    rememberRecentlyViewedPlace(place);
+    navigateToPlacePage(place.id);
+  };
+
+  const openRecentlyViewedPlace = (placeId: string) => {
+    const place = places.find((candidate) => candidate.id === placeId);
+    if (place) rememberRecentlyViewedPlace(place);
+    navigateToPlacePage(placeId);
   };
 
   const closePlacePage = () => {
@@ -267,6 +277,7 @@ export default function App() {
                   onOpenMap={() => openMap('local')}
                   onOpenModal={(modal) => modal === 'nearby' ? openMap('local', 'nearby') : setActiveModal(modal)}
                   onOpenCategory={(category) => openCategory('local', category)}
+                  onOpenPlace={openRecentlyViewedPlace}
                 />
               )}
 
