@@ -53,6 +53,52 @@ export const parseCsv = (csvText: string): string[][] => {
   return rows;
 };
 
+const isSupportedPhotoUrl = (value: string) => {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' || url.protocol === 'http:';
+  } catch {
+    return false;
+  }
+};
+
+const parsePhotoUrls = (value: string) => {
+  if (!value.trim()) return [];
+
+  if (value.trim().startsWith('[')) {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .filter((entry): entry is string => typeof entry === 'string')
+          .map((entry) => entry.trim())
+          .filter(isSupportedPhotoUrl);
+      }
+    } catch {
+      // Fall through to the delimiter-based format used by the Sheet.
+    }
+  }
+
+  return value
+    .split(/(?:\r?\n|[;|])+/)
+    .map((entry) => entry.trim())
+    .filter(isSupportedPhotoUrl);
+};
+
+export const hasApprovedPhotoPermission = (permission = '') => {
+  const normalized = permission.trim().toLowerCase().replace(/[\s_]+/g, '-');
+  return normalized === 'yes' || normalized === 'owner-provided';
+};
+
+export const getApprovedPhotoUrls = (place: PlaceRecord) => {
+  if (!hasApprovedPhotoPermission(place.photoPermission)) return [];
+
+  return Array.from(new Set([
+    place.coverPhotoUrl || '',
+    ...(place.photoUrls || []),
+  ].filter(isSupportedPhotoUrl)));
+};
+
 export const normalizePlacesCsv = (csvText: string): PlaceRecord[] => {
   const rows = parseCsv(csvText);
   if (rows.length < 2) return [];
@@ -95,6 +141,11 @@ export const normalizePlacesCsv = (csvText: string): PlaceRecord[] => {
       lastChecked: read(row, 'Last Checked') || read(row, 'Last Verified'),
       status,
       notes: read(row, 'Notes'),
+      coverPhotoUrl: read(row, 'Cover Photo URL'),
+      photoUrls: parsePhotoUrls(read(row, 'Photo URLs')),
+      photoSource: read(row, 'Photo Source'),
+      photoCredit: read(row, 'Photo Credit'),
+      photoPermission: read(row, 'Photo Permission'),
     }];
   });
 

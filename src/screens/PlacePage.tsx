@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import {
-  AlertTriangle, ArrowLeft, Bookmark, Check, Clock3, Database, ExternalLink, Globe2,
-  MapPin, Navigation, Phone, RefreshCw, Share2, ShieldCheck,
+  AlertTriangle, ArrowLeft, Bookmark, Camera, Check, Clock3, Database, ExternalLink,
+  Globe2, ImageOff, Images, MapPin, Navigation, Phone, RefreshCw, Share2, ShieldCheck,
 } from 'lucide-react';
 import type { Barangay, PlaceRecord, PlacesDataState, UserLocation } from '../types/app';
 import { CATEGORY_MARKER_COLORS } from '../data/categories';
-import { formatDistance, getDirectionsUrl, getDistanceMeters } from '../utils/places';
+import { PhotoGallery } from '../components/PhotoGallery';
+import { formatDistance, getApprovedPhotoUrls, getDirectionsUrl, getDistanceMeters } from '../utils/places';
 import { buildPlacePageUrl } from '../utils/placeNavigation';
 
 export interface PlacePageProps {
@@ -30,6 +31,11 @@ export const PlacePage: React.FC<PlacePageProps> = ({
   onToggleSaved,
 }) => {
   const [shareState, setShareState] = useState<'idle' | 'copied'>('idle');
+  const [coverPhotoIndex, setCoverPhotoIndex] = useState(0);
+  const [coverPhotoFailed, setCoverPhotoFailed] = useState(false);
+  const [galleryStartIndex, setGalleryStartIndex] = useState<number | null>(null);
+  const approvedPhotoUrls = place ? getApprovedPhotoUrls(place) : [];
+  const photoSignature = approvedPhotoUrls.join('\n');
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
@@ -41,6 +47,12 @@ export const PlacePage: React.FC<PlacePageProps> = ({
     const timeout = window.setTimeout(() => setShareState('idle'), 1800);
     return () => window.clearTimeout(timeout);
   }, [shareState]);
+
+  useEffect(() => {
+    setCoverPhotoIndex(0);
+    setCoverPhotoFailed(false);
+    setGalleryStartIndex(null);
+  }, [requestedPlaceId, photoSignature]);
 
   const copyPlaceLink = async (url: string) => {
     try {
@@ -96,8 +108,11 @@ export const PlacePage: React.FC<PlacePageProps> = ({
   const isVerified = place.status.toLowerCase() === 'verified';
   const primaryExternalUrl = place.website || place.sourceUrl;
   const primaryExternalLabel = place.website ? 'Website' : 'Source';
+  const coverPhotoUrl = coverPhotoFailed ? '' : (approvedPhotoUrls[coverPhotoIndex] || '');
+  const photoFallbackLabel = approvedPhotoUrls.length > 0 ? 'Photo unavailable' : 'No approved photo';
 
   return (
+    <>
     <main className="min-h-[100dvh] bg-[#EEF1E8] pb-[max(2rem,env(safe-area-inset-bottom))]">
       <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-white/70 bg-[#EEF1E8]/90 px-[max(1rem,env(safe-area-inset-left))] pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl">
         <button type="button" onClick={onBack} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#FFFDF7] text-[#26372F] shadow-sm transition active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20" aria-label="Back"><ArrowLeft className="h-5 w-5" /></button>
@@ -107,12 +122,40 @@ export const PlacePage: React.FC<PlacePageProps> = ({
 
       <div className="mx-auto max-w-md px-[max(1rem,env(safe-area-inset-left))] pt-4" style={{ paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
         <section className="relative overflow-hidden rounded-[32px] p-5 text-white shadow-[0_18px_44px_rgba(31,47,39,.18)]" style={{ backgroundImage: `linear-gradient(145deg, ${accent} 0%, #26372F 115%)` }}>
-          <div className="absolute -right-12 -top-14 h-40 w-40 rounded-full border border-white/15 bg-white/10" />
-          <div className="absolute -bottom-16 -left-12 h-40 w-40 rounded-full border border-white/10 bg-black/10" />
+          {coverPhotoUrl ? (
+            <button
+              type="button"
+              onClick={() => setGalleryStartIndex(coverPhotoIndex)}
+              className="absolute inset-0 h-full w-full focus:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-white/70"
+              aria-label={`Open ${place.name} photo gallery`}
+            >
+              <img
+                key={coverPhotoUrl}
+                src={coverPhotoUrl}
+                alt=""
+                className="h-full w-full object-cover"
+                onError={() => {
+                  if (coverPhotoIndex + 1 < approvedPhotoUrls.length) {
+                    setCoverPhotoIndex((index) => index + 1);
+                  } else {
+                    setCoverPhotoFailed(true);
+                  }
+                }}
+              />
+              <span className="absolute inset-0 bg-gradient-to-t from-[#17231D]/95 via-[#17231D]/32 to-[#17231D]/20" />
+            </button>
+          ) : (
+            <>
+              <div className="absolute -right-12 -top-14 h-40 w-40 rounded-full border border-white/15 bg-white/10" />
+              <div className="absolute -bottom-16 -left-12 h-40 w-40 rounded-full border border-white/10 bg-black/10" />
+            </>
+          )}
           <div className="relative z-10 flex min-h-[190px] flex-col justify-between">
             <div className="flex items-start justify-between gap-3">
-              <span className="grid h-12 w-12 place-items-center rounded-2xl border border-white/20 bg-white/15 backdrop-blur-sm"><MapPin className="h-6 w-6" /></span>
-              <span className="rounded-full border border-white/20 bg-white/15 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.12em] backdrop-blur-sm">Photos in 3B</span>
+              <span className="grid h-12 w-12 place-items-center rounded-2xl border border-white/20 bg-black/15 backdrop-blur-sm">{coverPhotoUrl ? <Camera className="h-6 w-6" /> : <ImageOff className="h-6 w-6" />}</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/15 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.12em] backdrop-blur-sm">
+                {coverPhotoUrl ? <><Images className="h-3.5 w-3.5" />{approvedPhotoUrls.length} {approvedPhotoUrls.length === 1 ? 'photo' : 'photos'}</> : photoFallbackLabel}
+              </span>
             </div>
             <div>
               <div className="mb-2 flex flex-wrap gap-2">
@@ -124,6 +167,13 @@ export const PlacePage: React.FC<PlacePageProps> = ({
             </div>
           </div>
         </section>
+        {coverPhotoUrl && (place.photoCredit || place.photoSource) && (
+          <p className="mt-2 px-2 text-[10px] font-semibold leading-4 text-[#748078]">
+            {place.photoCredit && <span>Photo: {place.photoCredit}</span>}
+            {place.photoCredit && place.photoSource && <span aria-hidden="true"> · </span>}
+            {place.photoSource && <span>Source: {place.photoSource}</span>}
+          </p>
+        )}
 
         <div className="mt-4 flex flex-wrap items-center gap-2" aria-label="Listing status">
           <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-extrabold ${isVerified ? 'bg-[#DDEBDF] text-[#2B6A4E]' : 'bg-[#FFF0D8] text-[#8A5726]'}`}>{isVerified ? <ShieldCheck className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}{isVerified ? 'Verified location' : 'Needs local confirmation'}</span>
@@ -165,5 +215,16 @@ export const PlacePage: React.FC<PlacePageProps> = ({
         <button type="button" onClick={onBack} className="mt-5 w-full rounded-full border border-[#D1DAD2] bg-[#FFFDF7] px-5 py-3.5 text-sm font-extrabold text-[#35463E] shadow-sm transition active:scale-[0.99] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20">Back</button>
       </div>
     </main>
+    {galleryStartIndex !== null && (
+      <PhotoGallery
+        placeName={place.name}
+        photos={approvedPhotoUrls}
+        initialIndex={galleryStartIndex}
+        photoSource={place.photoSource}
+        photoCredit={place.photoCredit}
+        onClose={() => setGalleryStartIndex(null)}
+      />
+    )}
+    </>
   );
 };

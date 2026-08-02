@@ -73,6 +73,11 @@ export interface PlaceRecord {
   lastChecked: string;
   status: string;
   notes: string;
+  coverPhotoUrl?: string;
+  photoUrls?: string[];
+  photoSource?: string;
+  photoCredit?: string;
+  photoPermission?: string;
 }
 
 export type PlacesDataState = 'loading' | 'live' | 'snapshot' | 'offline';
