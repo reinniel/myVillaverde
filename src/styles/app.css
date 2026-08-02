@@ -1,0 +1,150 @@
+html, body, #root {
+  min-height: 100%;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+#root::-webkit-scrollbar,
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+button, [role='button'] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+:focus-visible {
+  scroll-margin: 1rem;
+}
+.leaflet-control-container {
+  font-family: inherit;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+@keyframes modeEnterNeutral {
+  from { opacity: 0; transform: translateY(10px) scale(.992); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+@keyframes modeEnterLeft {
+  from { opacity: 0; transform: translate3d(-28px, 0, 0) scale(.992); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+@keyframes modeEnterRight {
+  from { opacity: 0; transform: translate3d(28px, 0, 0) scale(.992); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+@keyframes sectionRise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes themeSwap {
+  from { opacity: .72; transform: scale(.992); }
+  to { opacity: 1; transform: scale(1); }
+}
+.mode-page {
+  will-change: transform, opacity;
+}
+.mode-page-neutral { animation: modeEnterNeutral .36s cubic-bezier(.2,.8,.2,1) both; }
+.mode-page-left { animation: modeEnterLeft .38s cubic-bezier(.2,.8,.2,1) both; }
+.mode-page-right { animation: modeEnterRight .38s cubic-bezier(.2,.8,.2,1) both; }
+.mode-page main > * {
+  animation: sectionRise .4s cubic-bezier(.2,.8,.2,1) both;
+}
+.mode-page main > *:nth-child(2) { animation-delay: 45ms; }
+.mode-page main > *:nth-child(3) { animation-delay: 90ms; }
+.mode-page main > *:nth-child(4) { animation-delay: 135ms; }
+.barangay-theme-swap { animation: themeSwap .32s ease-out both; }
+@keyframes mapScreenEnter {
+  from { opacity: 0; transform: translateY(14px) scale(.992); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes mapMarkerEnter {
+  from { opacity: 0; filter: blur(2px); }
+  to { opacity: 1; filter: blur(0); }
+}
+@keyframes placePreviewEnter {
+  from { opacity: 0; transform: translateY(12px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.map-screen-enter { animation: mapScreenEnter .38s cubic-bezier(.2,.8,.2,1) both; }
+.map-marker { animation: mapMarkerEnter .3s ease-out both; }
+.place-preview-enter { animation: placePreviewEnter .28s cubic-bezier(.2,.8,.2,1) both; }
+.leaflet-container {
+  background: #E8EDE2;
+  font-family: inherit;
+}
+.myvillaverde-map-tooltip {
+  max-width: 210px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: rgba(255,253,247,.97) !important;
+  color: #26372F !important;
+  box-shadow: 0 6px 18px rgba(24,36,31,.18) !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  line-height: 1.25 !important;
+  overflow: hidden !important;
+  padding: 6px 10px !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+.myvillaverde-map-tooltip::before {
+  border-top-color: rgba(255,253,247,.97) !important;
+}
+.myvillaverde-barangay-tooltip {
+  background: rgba(38,55,47,.94) !important;
+  color: #FFFFFF !important;
+  letter-spacing: .01em !important;
+}
+.myvillaverde-barangay-tooltip::before {
+  border-top-color: rgba(38,55,47,.94) !important;
+}
+@keyframes brandSlideLeft {
+  from { opacity: 0; transform: translateX(18px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes brandSlideRight {
+  from { opacity: 0; transform: translateX(-18px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes brandFade {
+  from { opacity: 0; transform: scale(.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes sheetBackdropEnter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes sheetBackdropExit {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes sheetPanelEnter {
+  from { transform: translateY(44px) scale(.985); opacity: .65; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes sheetPanelExit {
+  from { transform: translateY(0) scale(1); opacity: 1; }
+  to { transform: translateY(36px) scale(.99); opacity: 0; }
+}
+.sheet-backdrop-enter { animation: sheetBackdropEnter .2s ease-out both; }
+.sheet-backdrop-exit { animation: sheetBackdropExit .21s ease-in both; }
+.sheet-panel-enter { animation: sheetPanelEnter .3s cubic-bezier(.2,.8,.2,1) both; }
+.sheet-panel-exit { animation: sheetPanelExit .21s ease-in both; }
+@media (prefers-reduced-motion: reduce) {
+  .leaflet-zoom-animated,
+  .leaflet-fade-anim .leaflet-popup,
+  .leaflet-fade-anim .leaflet-map-pane .leaflet-popup {
+    transition: none !important;
+  }
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
