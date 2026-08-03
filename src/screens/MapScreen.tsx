@@ -19,7 +19,7 @@ import { EmptyState } from '../components/EmptyState';
 import {
   LOCAL_DEFAULT_ZOOM, VISITOR_DEFAULT_ZOOM, VILLAVERDE_CENTER, readStoredMapView,
 } from '../utils/mapView';
-import { formatDistance, getDirectionsUrl, getDistanceMeters } from '../utils/places';
+import { formatDistance, getDirectionsUrl, getDistanceMeters, getOpeningHoursSummary } from '../utils/places';
 
 export interface MapScreenProps {
   activeBarangay: Barangay;
@@ -168,11 +168,13 @@ export const MapScreen: React.FC<MapScreenProps> = ({
   const scopePlaces = places
     .filter((place) => scope === 'visitor' || place.barangay === activeBarangay.name)
     .sort((a, b) => a.name.localeCompare(b.name));
-  const distanceByPlaceId = new Map(scopePlaces.map((place) => [
+  const villaverdePlaces = [...places].sort((a, b) => a.name.localeCompare(b.name));
+  const activePanelPlaces = panelView === 'nearby' ? villaverdePlaces : scopePlaces;
+  const distanceByPlaceId = new Map(villaverdePlaces.map((place) => [
     place.id,
     userLocation ? getDistanceMeters(userLocation, place) : null,
   ]));
-  const filteredPlaces = scopePlaces
+  const filteredPlaces = activePanelPlaces
     .filter((place) => selectedCategory === 'all' || place.categoryId === selectedCategory)
     .sort((a, b) => {
       if (panelView === 'nearby' && userLocation) {
@@ -188,7 +190,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
   const searchBarangayResults = normalizedSearch
     ? VILLAVERDE_BARANGAYS.filter((barangay) => barangay.name.toLowerCase().includes(normalizedSearch))
     : [];
-  const visibleBarangayMarkers = scope === 'local'
+  const visibleBarangayMarkers = scope === 'local' && panelView !== 'nearby'
     ? VILLAVERDE_BARANGAYS.filter((barangay) => barangay.id === activeBarangay.id)
     : VILLAVERDE_BARANGAYS;
   const selectedBarangayMarker = VILLAVERDE_BARANGAYS.find((barangay) => barangay.id === selectedBarangayId) ?? null;
@@ -1048,7 +1050,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
                 <>
                   <div className="flex items-center gap-3 rounded-[22px] border border-[#BFD2EA] bg-[#F2F7FF] p-4">
                     <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#2563EB] text-white"><LocateFixed className="h-5 w-5" /></span>
-                    <div className="min-w-0 flex-1"><p className="text-sm font-extrabold text-[#1E3A5F]">Location active</p><p className="mt-0.5 text-xs font-semibold text-[#64748B]">Closest places are listed first · accuracy about {Math.max(1, Math.round(userLocation.accuracy))} m</p></div>
+                    <div className="min-w-0 flex-1"><p className="text-sm font-extrabold text-[#1E3A5F]">Location active</p><p className="mt-0.5 text-xs font-semibold text-[#64748B]">Closest places across Villaverde are listed first · accuracy about {Math.max(1, Math.round(userLocation.accuracy))} m</p></div>
                     <button type="button" onClick={() => centerOnUser()} className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-[#2563EB] shadow-sm transition-all active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2563EB]/20" aria-label="Center map on my location"><LocateFixed className="h-4 w-4" /></button>
                   </div>
 
@@ -1056,7 +1058,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
                     {MAP_CATEGORIES.map((category) => {
                       const Icon = category.icon;
                       const isActive = selectedCategory === category.id;
-                      const count = scopePlaces.filter((place) => category.id === 'all' || place.categoryId === category.id).length;
+                      const count = villaverdePlaces.filter((place) => category.id === 'all' || place.categoryId === category.id).length;
                       return (
                         <button key={category.id} type="button" onClick={() => setSelectedCategory(category.id)} className={`flex min-h-[58px] items-center gap-2.5 rounded-[18px] border px-3 py-2.5 text-left transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20 ${isActive ? 'shadow-sm' : 'border-[#D9E0D8] bg-[#FFFDF7]'}`} style={isActive ? { borderColor: mapAccent, backgroundColor: mapAccentSoft, color: mapAccent } : undefined}>
                           <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${isActive ? 'text-white' : 'bg-[#EEF1E8] text-[#526158]'}`} style={isActive ? { backgroundColor: mapAccent } : undefined}><Icon className="h-4 w-4" /></span>
@@ -1070,12 +1072,34 @@ export const MapScreen: React.FC<MapScreenProps> = ({
                     <div className="space-y-2.5">
                       {filteredPlaces.map((place, index) => {
                         const distance = distanceByPlaceId.get(place.id);
+                        const openingHours = getOpeningHoursSummary(place.openingHours);
+                        const openingHoursTone = openingHours.state === 'open'
+                          ? 'bg-[#E7F0E8] text-[#2B6A4E]'
+                          : openingHours.state === 'closed'
+                            ? 'bg-[#FBE9E7] text-[#9B4338]'
+                            : openingHours.state === 'check'
+                              ? 'bg-[#FFF0D8] text-[#8A581F]'
+                              : 'bg-[#EEF1E8] text-[#647068]';
+
                         return (
-                          <button type="button" key={place.id} onClick={() => focusPlace(place)} className="flex w-full items-center gap-3 rounded-[20px] border border-[#D9E0D8] bg-[#FFFDF7] p-3.5 text-left transition-all hover:bg-white active:scale-[0.99] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20">
-                            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-white shadow-sm" style={{ backgroundColor: CATEGORY_MARKER_COLORS[place.categoryId] }}><span className="text-xs font-black">{index + 1}</span></span>
-                            <span className="min-w-0 flex-1"><span className="block truncate text-sm font-extrabold text-[#26372F]">{place.name}</span><span className="mt-0.5 block truncate text-xs font-medium text-[#748078]">{place.subcategory} · {place.barangay}</span></span>
-                            <span className="shrink-0 rounded-full bg-[#E7F0E8] px-2.5 py-1 text-[10px] font-extrabold text-[#2B6A4E]">{distance !== null && distance !== undefined ? formatDistance(distance) : '—'}</span>
-                          </button>
+                          <article key={place.id} className="rounded-[22px] border border-[#D9E0D8] bg-[#FFFDF7] p-3.5 shadow-xs">
+                            <div className="flex items-start gap-3">
+                              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-white shadow-sm" style={{ backgroundColor: CATEGORY_MARKER_COLORS[place.categoryId] }} aria-hidden="true"><span className="text-xs font-black">{index + 1}</span></span>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-extrabold text-[#26372F]">{place.name}</p>
+                                <p className="mt-0.5 truncate text-xs font-medium text-[#748078]">{place.subcategory} · {place.barangay}</p>
+                                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                  <span className="rounded-full bg-[#E7F0E8] px-2.5 py-1 text-[10px] font-extrabold text-[#2B6A4E]">{distance !== null && distance !== undefined ? formatDistance(distance) : '—'}</span>
+                                  <span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold ${openingHoursTone}`}>{openingHours.label}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="mt-3 grid grid-cols-2 gap-2">
+                              <a href={getDirectionsUrl(place)} target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-[16px] bg-[#26372F] px-3 py-2.5 text-xs font-extrabold text-white transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#26372F]/25" aria-label={`Get directions to ${place.name}`}><Navigation className="h-4 w-4" />Directions</a>
+                              <button type="button" onClick={() => onOpenPlacePage(place)} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-[16px] border border-[#C7D9C9] bg-[#EFF7EE] px-3 py-2.5 text-xs font-extrabold text-[#2B6A4E] transition-all hover:bg-[#E5F1E5] active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20" aria-label={`Open the place page for ${place.name}`}>View place<ArrowRight className="h-4 w-4" /></button>
+                            </div>
+                          </article>
                         );
                       })}
                     </div>
