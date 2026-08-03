@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   AlertTriangle, ArrowLeft, Bookmark, Camera, Check, ChevronRight, Clock3, Database,
   ExternalLink, Globe2, ImageOff, Images, MapPin, Navigation, Phone, RefreshCw,
@@ -97,6 +97,7 @@ export const PlacePage: React.FC<PlacePageProps> = ({
   const [coverPhotoIndex, setCoverPhotoIndex] = useState(0);
   const [coverPhotoFailed, setCoverPhotoFailed] = useState(false);
   const [galleryStartIndex, setGalleryStartIndex] = useState<number | null>(null);
+  const pageHeadingRef = useRef<HTMLHeadingElement>(null);
   const approvedPhotoUrls = place ? getApprovedPhotoUrls(place) : [];
   const photoSignature = approvedPhotoUrls.join('\n');
 
@@ -104,6 +105,11 @@ export const PlacePage: React.FC<PlacePageProps> = ({
     window.scrollTo({ top: 0, behavior: 'auto' });
     setShareState('idle');
   }, [requestedPlaceId]);
+
+  useEffect(() => {
+    if (!place && dataState === 'loading') return;
+    pageHeadingRef.current?.focus({ preventScroll: true });
+  }, [dataState, place, requestedPlaceId]);
 
   useEffect(() => {
     if (shareState !== 'copied') return;
@@ -158,7 +164,7 @@ export const PlacePage: React.FC<PlacePageProps> = ({
         </header>
         <div className="mx-auto max-w-md px-5 pt-16 text-center">
           <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#FFFDF7] text-[#526158] shadow-sm">{isLoading ? <RefreshCw className="h-7 w-7 animate-spin" /> : <AlertTriangle className="h-7 w-7" />}</span>
-          <h1 className="mt-5 font-serif-header text-2xl font-bold text-[#18241F]">{isLoading ? 'Loading place' : 'Place unavailable'}</h1>
+          <h1 ref={pageHeadingRef} tabIndex={-1} className="mt-5 font-serif-header text-2xl font-bold text-[#18241F] focus:outline-none">{isLoading ? 'Loading place' : 'Place unavailable'}</h1>
           <p className="mx-auto mt-2 max-w-[310px] text-sm font-medium leading-6 text-[#748078]">{isLoading ? loadMessage : `The place ID “${requestedPlaceId}” is not available in the current database.`}</p>
           <button type="button" onClick={onBack} className="mt-6 rounded-full bg-[#26372F] px-6 py-3 text-sm font-extrabold text-white transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#26372F]/25">Back to myVillaverde</button>
         </div>
@@ -234,7 +240,7 @@ export const PlacePage: React.FC<PlacePageProps> = ({
               <div className="absolute -bottom-16 -left-12 h-40 w-40 rounded-full border border-white/10 bg-black/10" />
             </>
           )}
-          <div className="relative z-10 flex min-h-[190px] flex-col justify-between">
+          <div className="pointer-events-none relative z-10 flex min-h-[190px] flex-col justify-between">
             <div className="flex items-start justify-between gap-3">
               <span className="grid h-12 w-12 place-items-center rounded-2xl border border-white/20 bg-black/15 backdrop-blur-sm">{coverPhotoUrl ? <Camera className="h-6 w-6" /> : <ImageOff className="h-6 w-6" />}</span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/15 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.12em] backdrop-blur-sm">
@@ -246,7 +252,7 @@ export const PlacePage: React.FC<PlacePageProps> = ({
                 <span className="rounded-full bg-white/16 px-2.5 py-1 text-[10px] font-extrabold">{place.category}</span>
                 <span className="rounded-full bg-white/16 px-2.5 py-1 text-[10px] font-extrabold">{place.barangay}</span>
               </div>
-              <h1 className="font-serif-header text-[30px] font-bold leading-[1.02] [overflow-wrap:anywhere]">{place.name}</h1>
+              <h1 ref={pageHeadingRef} tabIndex={-1} className="font-serif-header text-[30px] font-bold leading-[1.02] focus:outline-none [overflow-wrap:anywhere]">{place.name}</h1>
               <p className="mt-2 text-sm font-semibold text-white/78">{place.subcategory || 'Place in Villaverde'}</p>
             </div>
           </div>
@@ -265,6 +271,7 @@ export const PlacePage: React.FC<PlacePageProps> = ({
           <span className="rounded-full bg-[#FFFDF7] px-3 py-1.5 text-[11px] font-extrabold text-[#627066] shadow-xs">{dataState === 'live' ? 'Live database' : dataState === 'offline' ? 'Offline data' : dataState === 'snapshot' ? 'Snapshot data' : 'Loading database'}</span>
           {distance !== null && <span className="rounded-full bg-[#FFFDF7] px-3 py-1.5 text-[11px] font-extrabold text-[#627066] shadow-xs">{formatDistance(distance)} away</span>}
         </div>
+        <p className="sr-only" role="status" aria-live="polite">{shareState === 'copied' ? 'Place link copied' : ''}</p>
 
         <section className="mt-5 grid grid-cols-3 gap-2.5" aria-label="Primary place actions">
           <a href={getDirectionsUrl(place)} target="_blank" rel="noreferrer" className="flex min-h-[82px] flex-col items-center justify-center gap-2 rounded-[22px] bg-[#26372F] px-2 text-white shadow-sm transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#26372F]/25"><Navigation className="h-5 w-5" /><span className="text-[11px] font-extrabold">Directions</span></a>
@@ -300,7 +307,7 @@ export const PlacePage: React.FC<PlacePageProps> = ({
             </div>
             <div className="flex items-start gap-3 py-4"><MapPin className="mt-0.5 h-5 w-5 shrink-0" style={{ color: accent }} /><div><p className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#89928A]">Address</p><p className="mt-1 text-sm font-bold leading-5 text-[#35463E]">{place.address || `${place.barangay}, Villaverde, Nueva Vizcaya`}</p></div></div>
             {place.phone && <div className="flex items-start gap-3 py-4"><Phone className="mt-0.5 h-5 w-5 shrink-0" style={{ color: accent }} /><div><p className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#89928A]">Phone</p><p className="mt-1 text-sm font-bold leading-5 text-[#35463E]">{place.phone}</p></div></div>}
-            {place.website && <div className="flex items-start gap-3 py-4"><Globe2 className="mt-0.5 h-5 w-5 shrink-0" style={{ color: accent }} /><div className="min-w-0"><p className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#89928A]">Website</p><a href={place.website} target="_blank" rel="noreferrer" className="mt-1 inline-flex max-w-full items-center gap-1.5 text-sm font-bold leading-5 text-[#35463E] underline decoration-[#B8C4BA] underline-offset-4"><span className="truncate">{formatWebsiteLabel(place.website)}</span><ExternalLink className="h-3.5 w-3.5 shrink-0" /></a></div></div>}
+            {place.website && <div className="flex items-start gap-3 py-4"><Globe2 className="mt-0.5 h-5 w-5 shrink-0" style={{ color: accent }} /><div className="min-w-0"><p className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#89928A]">Website</p><a href={place.website} target="_blank" rel="noreferrer" className="mt-1 inline-flex min-h-11 max-w-full items-center gap-1.5 text-sm font-bold leading-5 text-[#35463E] underline decoration-[#B8C4BA] underline-offset-4"><span className="truncate">{formatWebsiteLabel(place.website)}</span><ExternalLink className="h-3.5 w-3.5 shrink-0" /></a></div></div>}
             <div className="flex items-start gap-3 py-4"><Database className="mt-0.5 h-5 w-5 shrink-0" style={{ color: accent }} /><div><p className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#89928A]">Verification source</p><p className="mt-1 text-sm font-bold leading-5 text-[#35463E]">{place.verificationSource || 'Source not documented'}</p></div></div>
             <div className="flex items-start gap-3 py-4"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" style={{ color: accent }} /><div><p className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#89928A]">Listing status</p><p className="mt-1 text-sm font-bold leading-5 text-[#35463E]">{place.status || 'Needs Checking'}{place.lastChecked ? ` · Checked ${formatCheckedDate(place.lastChecked)}` : ' · Check date unavailable'}</p></div></div>
           </div>

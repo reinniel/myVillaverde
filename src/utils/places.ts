@@ -158,7 +158,7 @@ export const placeMatchesGuideCategory = (place: PlaceRecord, selection: Selecte
   if (selection.scope === 'local' && place.barangay !== activeBarangayName) return false;
 
   const categoryId = selection.category.id;
-  if (categoryId === 'food' || categoryId === 'services' || categoryId === 'transport' || categoryId === 'visit') {
+  if (categoryId === 'food' || categoryId === 'services' || categoryId === 'transport' || categoryId === 'visit' || categoryId === 'government') {
     return place.categoryId === categoryId;
   }
 

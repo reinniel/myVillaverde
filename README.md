@@ -1,41 +1,43 @@
-# myVillaverde — Phase 3R Modular Refactor
+# myVillaverde Phase 3E — Final AI Studio Update
 
-This build preserves the Phase 3A interface and behavior while reorganizing the app into maintainable modules before photos and galleries are added.
+This is a self-contained final Phase 3 handoff. It includes the current Phase
+3B, 3C, 3D, and 3E files so the related-place wiring and supporting utilities
+cannot be missed.
 
-## What remains unchanged
+## Replace these matching files in AI Studio
 
-- Ko, Home, and Mo experiences
-- Barangay selection and theming
-- Live Google Sheets place data with snapshot/offline fallback
-- Leaflet map, categories, markers, Nearby, location, and saved places
-- Three-level map bottom sheet and compact pills
-- Dedicated place pages and `?place=<Place ID>` browser-history flow
-- Accessibility, focus handling, reduced motion, and safe-area behavior
+1. `src/App.tsx`
+2. `src/types/app.ts`
+3. `src/utils/places.ts`
+4. `src/components/PhotoGallery.tsx`
+5. `src/screens/PlacePage.tsx`
+6. `vite.config.ts`
 
-## Architecture
+Replace the contents of the existing files. Do not create duplicate files with
+similar names.
 
-```text
-src/
-├─ components/   Reusable interface components
-├─ data/         Barangays, categories, config, and fallback places
-├─ hooks/        Shared data and browser-preference hooks
-├─ screens/      Landing, dashboards, map, and place pages
-├─ styles/       Application-wide animation and map styles
-├─ types/        Shared TypeScript models
-├─ utils/        Place, URL, distance, and map-storage helpers
-└─ App.tsx       App-level state, orchestration, and modal routing
-```
+## What Phase 3E adds
 
-## Intentional cleanup
+- Final 320 px and 390 px mobile layout polish
+- A valid Vite configuration that passes TypeScript checking
+- Keyboard and screen-reader focus on the newly opened place page
+- A polite screen-reader announcement when a place link is copied
+- Keyboard focus trapping and focus restoration in the photo gallery
+- Full-cover tapping when an approved cover photo is present
+- A 44 px minimum tap target for the website link in Place details
 
-The silent 50-place saved-items cap was removed. Adding another saved place no longer discards the oldest entry.
+## Verified before packaging
 
-## Run in Google AI Studio
+- `npm run lint` passes
+- `npm run build` passes
+- No horizontal page overflow at 320 px or 390 px
+- No interactive target below 44 px on the tested place page
+- Related-place navigation opens the correct record
+- Browser Back and Forward restore the correct place
+- Save toggles and restores correctly
+- Open 24 hours, Check current hours, and Hours unavailable states render
+- Missing-place and no-approved-photo states render
+- No browser console errors or warnings during the final regression pass
 
-Upload the full ZIP as the project. Phase 3R is multi-file, so replacing only `App.tsx` is not sufficient.
-
-The published Places CSV URL is already configured. Geolocation requires an HTTPS preview and user permission. When offline, the app retains the latest in-memory place data when available, otherwise it uses the built-in snapshot.
-
-## Next phase
-
-Phase 3B adds place photos and a gallery on top of this modular structure.
+The only remaining build notice is Vite's non-blocking warning that the main
+JavaScript bundle is slightly larger than 500 kB.

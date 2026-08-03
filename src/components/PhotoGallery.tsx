@@ -20,6 +20,9 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({
 }) => {
   const [activeIndex, setActiveIndex] = useState(initialIndex);
   const [failedPhotos, setFailedPhotos] = useState<Set<string>>(() => new Set());
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previouslyFocusedElement = useRef<HTMLElement | null>(null);
   const touchStartX = useRef<number | null>(null);
   const hasMultiplePhotos = photos.length > 1;
   const activePhoto = photos[activeIndex];
@@ -40,17 +43,49 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
+    previouslyFocusedElement.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
     document.body.style.overflow = 'hidden';
+    closeButtonRef.current?.focus();
 
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      if (previouslyFocusedElement.current?.isConnected) {
+        previouslyFocusedElement.current.focus();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
       if (event.key === 'ArrowLeft' && hasMultiplePhotos) showPrevious();
       if (event.key === 'ArrowRight' && hasMultiplePhotos) showNext();
+      if (event.key === 'Tab') {
+        const focusableElements = Array.from(
+          dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])') ?? [],
+        ).filter((element) => element.tabIndex >= 0);
+        if (focusableElements.length === 0) {
+          event.preventDefault();
+          dialogRef.current?.focus();
+          return;
+        }
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+        if (event.shiftKey && document.activeElement === firstElement) {
+          event.preventDefault();
+          lastElement.focus();
+        } else if (!event.shiftKey && document.activeElement === lastElement) {
+          event.preventDefault();
+          firstElement.focus();
+        }
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [hasMultiplePhotos, onClose, photos.length]);
@@ -66,22 +101,24 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({
 
   return (
     <div
+      ref={dialogRef}
+      tabIndex={-1}
       className="fixed inset-0 z-[100] flex min-h-[100dvh] flex-col bg-[#101713]/96 text-white backdrop-blur-xl"
       role="dialog"
       aria-modal="true"
-      aria-label={`${placeName} photo gallery`}
+      aria-labelledby="photo-gallery-title"
     >
       <header className="flex items-center justify-between gap-4 px-[max(1rem,env(safe-area-inset-left))] pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]" style={{ paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
         <div className="min-w-0">
-          <p className="truncate font-serif-header text-lg font-bold">{placeName}</p>
-          <p className="mt-0.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white/60">
+          <p id="photo-gallery-title" className="truncate font-serif-header text-lg font-bold">{placeName}</p>
+          <p className="mt-0.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white/60" aria-live="polite">
             Photo {activeIndex + 1} of {photos.length}
           </p>
         </div>
         <button
+          ref={closeButtonRef}
           type="button"
           onClick={onClose}
-          autoFocus
           className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/12 transition active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-white/25"
           aria-label="Close photo gallery"
         >

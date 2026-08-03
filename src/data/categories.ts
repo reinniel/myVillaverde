@@ -38,6 +38,15 @@ export const LOCAL_CATEGORIES: GuideCategory[] = [
     icon: Mountain,
     tone: 'border-[#CADCC8] bg-[#EFF7EA] text-[#326B3D]',
   },
+  {
+    id: 'government',
+    title: 'Government & Public Services',
+    description: 'Schools, barangay offices, emergency services, and public facilities',
+    emptyTitle: 'No public service listings yet',
+    emptyMessage: 'Schools, government offices, emergency services, and public facilities will appear here.',
+    icon: Building2,
+    tone: 'border-[#C8DBD1] bg-[#EEF7F1] text-[#2B6A4E]',
+  },
 ];
 
 export const VISITOR_CATEGORIES: GuideCategory[] = [
