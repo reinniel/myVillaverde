@@ -16,6 +16,7 @@ import { ModeHeader } from './components/ModeHeader';
 import { BottomSheet } from './components/BottomSheet';
 import { BarangayArtwork } from './components/BarangayArtwork';
 import { EmptyState } from './components/EmptyState';
+import { SavedPlacesSheet } from './components/SavedPlacesSheet';
 import { WelcomeLanding } from './screens/WelcomeLanding';
 import { LocalDashboard } from './screens/LocalDashboard';
 import { VisitorDashboard } from './screens/VisitorDashboard';
@@ -334,25 +335,21 @@ export default function App() {
 
 
       {activeModal === 'saved' && (
-        <BottomSheet title="Saved Places" subtitle="Places you bookmark stay on this device for quick access." onClose={() => setActiveModal(null)}>
-          {savedPlaces.length === 0 ? (
-            <EmptyState icon={Bookmark} title="Nothing saved yet" message="Save a place from its map preview and it will appear here." />
-          ) : (
-            <div className="space-y-2.5">
-              {savedPlaces.map((place) => (
-                <div key={place.id} className="flex items-center gap-2 rounded-[22px] border border-[#D9E0D8] bg-[#FFFDF7] p-2.5 shadow-xs">
-                  <button type="button" onClick={() => openPlacePage(place)} className="flex min-w-0 flex-1 items-center gap-3 rounded-[18px] p-1 text-left transition active:scale-[0.99] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20" aria-label={`Open ${place.name} place page`}>
-                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-white shadow-sm" style={{ backgroundColor: CATEGORY_MARKER_COLORS[place.categoryId] }}><MapPin className="h-5 w-5" /></span>
-                    <span className="min-w-0 flex-1"><span className="block truncate text-sm font-extrabold text-[#26372F]">{place.name}</span><span className="mt-0.5 block truncate text-xs font-medium text-[#748078]">{place.subcategory} · {place.barangay}{userLocation ? ` · ${formatDistance(getDistanceMeters(userLocation, place))}` : ''}</span></span>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-[#748078]" />
-                  </button>
-                  <button type="button" onClick={() => handleToggleSavedPlace(place)} className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#E7F0E8] text-[#2B6A4E] transition-all active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20" aria-label={`Remove ${place.name} from saved places`}><Bookmark className="h-4 w-4 fill-current" /></button>
-                </div>
-              ))}
-            </div>
-          )}
-        </BottomSheet>
-      )}
+  <BottomSheet
+    title="Saved Places"
+    subtitle="Favorites, plans, and places you recently opened."
+    onClose={() => setActiveModal(null)}
+  >
+    <SavedPlacesSheet
+      savedPlaces={savedPlaces}
+      recentlyViewedPlaces={recentlyViewedPlaces}
+      places={places}
+      userLocation={userLocation}
+      onOpenPlace={openPlacePage}
+      onToggleFavorite={handleToggleSavedPlace}
+    />
+  </BottomSheet>
+)}
 
       {activeModal === 'nearby' && (
         <BottomSheet title="Nearby" subtitle={mode === 'mo' ? 'Find useful stops close to you.' : `Discover places near ${activeBarangay.name}.`} onClose={() => setActiveModal(null)}>
