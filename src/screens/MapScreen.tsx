@@ -228,6 +228,9 @@ export const MapScreen: React.FC<MapScreenProps> = ({
       : placesDataState === 'offline'
         ? 'Offline'
         : 'Snapshot';
+  const nearbyLocationBlocked = locationStatus === 'denied' || locationStatus === 'unavailable' || locationStatus === 'error';
+  const nearbyIsInitialLoading = placesDataState === 'loading' && villaverdePlaces.length === 0;
+  const nearbyUsesFallbackData = placesDataState === 'offline' || placesDataState === 'snapshot';
   const panelTitle = panelView === 'layers'
     ? 'Map layers'
     : panelView === 'nearby'
@@ -1039,12 +1042,39 @@ export const MapScreen: React.FC<MapScreenProps> = ({
           {panelView === 'nearby' && (
             <div className="space-y-3">
               {!userLocation ? (
-                <div className="rounded-[26px] border border-[#D9E0D8] bg-[#FFFDF7] p-6 text-center shadow-xs">
-                  <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-[#E7F0E8] text-[#2B6A4E]">{locationStatus === 'requesting' ? <RefreshCw className="h-6 w-6 animate-spin" /> : <Navigation className="h-6 w-6" />}</span>
-                  <h2 className="mt-4 font-serif-header text-xl font-bold text-[#18241F]">Find places near you</h2>
-                  <p className="mx-auto mt-2 max-w-[300px] text-sm font-medium leading-6 text-[#748078]">Location stays off until you press the button. Without it, you can still browse every place normally.</p>
-                  {(locationStatus === 'denied' || locationStatus === 'unavailable' || locationStatus === 'error') && <p className="mx-auto mt-3 max-w-[300px] rounded-[16px] bg-[#FFF0D8] px-3 py-2 text-xs font-semibold leading-5 text-[#85501D]">{locationMessage}</p>}
-                  <button type="button" onClick={() => requestUserLocation('nearby')} disabled={locationStatus === 'requesting'} className="mt-5 rounded-full bg-[#26372F] px-5 py-3 text-sm font-extrabold text-white transition-all disabled:cursor-wait disabled:opacity-60 active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#26372F]/25">{locationStatus === 'requesting' ? 'Finding location…' : 'Use my location'}</button>
+                <div className={`rounded-[26px] border p-6 text-center shadow-xs ${nearbyLocationBlocked ? 'border-[#E7C98D] bg-[#FFF6E6]' : 'border-[#D9E0D8] bg-[#FFFDF7]'}`}>
+                  <span className={`mx-auto grid h-14 w-14 place-items-center rounded-full ${nearbyLocationBlocked ? 'bg-[#FFF0D8] text-[#9A5A24]' : 'bg-[#E7F0E8] text-[#2B6A4E]'}`}>
+                    {locationStatus === 'requesting'
+                      ? <RefreshCw className="h-6 w-6 animate-spin" />
+                      : nearbyLocationBlocked
+                        ? <AlertTriangle className="h-6 w-6" />
+                        : <Navigation className="h-6 w-6" />}
+                  </span>
+                  <h2 className="mt-4 font-serif-header text-xl font-bold text-[#18241F]">
+                    {locationStatus === 'requesting'
+                      ? 'Finding your location'
+                      : locationStatus === 'denied'
+                        ? 'Location permission denied'
+                        : locationStatus === 'unavailable'
+                          ? 'Location unavailable'
+                          : locationStatus === 'error'
+                            ? 'Could not get your location'
+                            : 'Find places near you'}
+                  </h2>
+                  <p className="mx-auto mt-2 max-w-[300px] text-sm font-medium leading-6 text-[#748078]">
+                    {nearbyLocationBlocked
+                      ? locationMessage
+                      : 'Location stays off until you press the button. Without it, you can still browse every place normally.'}
+                  </p>
+                  {locationStatus === 'denied' && (
+                    <p className="mx-auto mt-3 max-w-[300px] rounded-[16px] bg-white/75 px-3 py-2 text-xs font-semibold leading-5 text-[#85501D]">Allow location for this site in your browser settings, then try again.</p>
+                  )}
+                  <div className="mt-5 flex flex-wrap justify-center gap-2.5">
+                    <button type="button" onClick={() => requestUserLocation('nearby')} disabled={locationStatus === 'requesting'} className="rounded-full bg-[#26372F] px-5 py-3 text-sm font-extrabold text-white transition-all disabled:cursor-wait disabled:opacity-60 active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#26372F]/25">
+                      {locationStatus === 'requesting' ? 'Finding location…' : nearbyLocationBlocked ? 'Try location again' : 'Use my location'}
+                    </button>
+                    <button type="button" onClick={() => openPanelView('categories', 1)} className="rounded-full border border-[#D1DAD2] bg-white px-5 py-3 text-sm font-extrabold text-[#35463E] transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20">Browse manually</button>
+                  </div>
                 </div>
               ) : (
                 <>
@@ -1054,13 +1084,33 @@ export const MapScreen: React.FC<MapScreenProps> = ({
                     <button type="button" onClick={() => centerOnUser()} className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-[#2563EB] shadow-sm transition-all active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2563EB]/20" aria-label="Center map on my location"><LocateFixed className="h-4 w-4" /></button>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2.5">
+                  {placesDataState === 'loading' && (
+                    <div className="flex items-start gap-3 rounded-[20px] border border-[#D9E0D8] bg-[#F5F4EA] p-4" role="status" aria-live="polite">
+                      <RefreshCw className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-[#526158]" />
+                      <div><p className="text-sm font-extrabold text-[#26372F]">Updating nearby places</p><p className="mt-1 text-xs font-medium leading-5 text-[#748078]">{villaverdePlaces.length > 0 ? 'Showing available results while the live database refreshes.' : 'Loading the Villaverde Places database.'}</p></div>
+                    </div>
+                  )}
+
+                  {nearbyUsesFallbackData && (
+                    <div className="flex items-start gap-3 rounded-[20px] border border-[#E7C98D] bg-[#FFF6E6] p-4" role="status" aria-live="polite">
+                      <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[#9A5A24]" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-extrabold text-[#6F431C]">{placesDataState === 'offline' ? 'Offline nearby results' : 'Using saved nearby data'}</p>
+                        <p className="mt-1 text-xs font-medium leading-5 text-[#85501D]">Distances still work from saved coordinates, but live listing updates and external directions may be unavailable.</p>
+                      </div>
+                      {isOnline && (
+                        <button type="button" onClick={onRefreshPlaces} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/80 text-[#85501D] transition-all active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9A5A24]/25" aria-label="Refresh nearby place data"><RefreshCw className="h-4 w-4" /></button>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2.5" aria-label="Nearby place filters">
                     {MAP_CATEGORIES.map((category) => {
                       const Icon = category.icon;
                       const isActive = selectedCategory === category.id;
                       const count = villaverdePlaces.filter((place) => category.id === 'all' || place.categoryId === category.id).length;
                       return (
-                        <button key={category.id} type="button" onClick={() => setSelectedCategory(category.id)} className={`flex min-h-[58px] items-center gap-2.5 rounded-[18px] border px-3 py-2.5 text-left transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20 ${isActive ? 'shadow-sm' : 'border-[#D9E0D8] bg-[#FFFDF7]'}`} style={isActive ? { borderColor: mapAccent, backgroundColor: mapAccentSoft, color: mapAccent } : undefined}>
+                        <button key={category.id} type="button" onClick={() => setSelectedCategory(category.id)} className={`flex min-h-[58px] items-center gap-2.5 rounded-[18px] border px-3 py-2.5 text-left transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20 ${isActive ? 'shadow-sm' : 'border-[#D9E0D8] bg-[#FFFDF7]'}`} style={isActive ? { borderColor: mapAccent, backgroundColor: mapAccentSoft, color: mapAccent } : undefined} aria-pressed={isActive}>
                           <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${isActive ? 'text-white' : 'bg-[#EEF1E8] text-[#526158]'}`} style={isActive ? { backgroundColor: mapAccent } : undefined}><Icon className="h-4 w-4" /></span>
                           <span className="min-w-0"><span className="block text-[11px] font-extrabold leading-4">{category.id === 'all' ? 'All nearby' : category.label}</span><span className="block text-[9px] font-bold opacity-70">{count}</span></span>
                         </button>
@@ -1068,7 +1118,15 @@ export const MapScreen: React.FC<MapScreenProps> = ({
                     })}
                   </div>
 
-                  {filteredPlaces.length > 0 ? (
+                  <p className="sr-only" aria-live="polite">{filteredPlaces.length} nearby place{filteredPlaces.length === 1 ? '' : 's'} in the selected filter.</p>
+
+                  {nearbyIsInitialLoading ? (
+                    <div className="rounded-[22px] border border-[#D9E0D8] bg-[#FFFDF7] p-6 text-center" role="status">
+                      <RefreshCw className="mx-auto h-6 w-6 animate-spin text-[#526158]" />
+                      <p className="mt-3 text-sm font-extrabold text-[#26372F]">Loading nearby places</p>
+                      <p className="mt-1 text-xs font-medium leading-5 text-[#748078]">Results will appear nearest-first when the database is ready.</p>
+                    </div>
+                  ) : filteredPlaces.length > 0 ? (
                     <div className="space-y-2.5">
                       {filteredPlaces.map((place, index) => {
                         const distance = distanceByPlaceId.get(place.id);
@@ -1096,7 +1154,11 @@ export const MapScreen: React.FC<MapScreenProps> = ({
                             </div>
 
                             <div className="mt-3 grid grid-cols-2 gap-2">
-                              <a href={getDirectionsUrl(place)} target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-[16px] bg-[#26372F] px-3 py-2.5 text-xs font-extrabold text-white transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#26372F]/25" aria-label={`Get directions to ${place.name}`}><Navigation className="h-4 w-4" />Directions</a>
+                              {isOnline ? (
+                                <a href={getDirectionsUrl(place)} target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-[16px] bg-[#26372F] px-3 py-2.5 text-xs font-extrabold text-white transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#26372F]/25" aria-label={`Get directions to ${place.name}`}><Navigation className="h-4 w-4" />Directions</a>
+                              ) : (
+                                <button type="button" disabled className="inline-flex min-h-10 cursor-not-allowed items-center justify-center gap-2 rounded-[16px] bg-[#E5E7E2] px-3 py-2.5 text-xs font-extrabold text-[#8A918C]" aria-label={`Directions to ${place.name} are unavailable offline`}><Navigation className="h-4 w-4" />Offline</button>
+                              )}
                               <button type="button" onClick={() => onOpenPlacePage(place)} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-[16px] border border-[#C7D9C9] bg-[#EFF7EE] px-3 py-2.5 text-xs font-extrabold text-[#2B6A4E] transition-all hover:bg-[#E5F1E5] active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20" aria-label={`Open the place page for ${place.name}`}>View place<ArrowRight className="h-4 w-4" /></button>
                             </div>
                           </article>
@@ -1104,7 +1166,13 @@ export const MapScreen: React.FC<MapScreenProps> = ({
                       })}
                     </div>
                   ) : (
-                    <div className="rounded-[22px] border border-[#D9E0D8] bg-[#FFFDF7] p-5 text-center"><p className="text-sm font-bold text-[#26372F]">No nearby places in this filter</p><p className="mt-1 text-xs font-medium leading-5 text-[#748078]">Try another category or browse all places.</p></div>
+                    <div className="rounded-[22px] border border-[#D9E0D8] bg-[#FFFDF7] p-5 text-center">
+                      <p className="text-sm font-bold text-[#26372F]">{nearbyUsesFallbackData && villaverdePlaces.length === 0 ? 'No offline nearby data available' : 'No nearby places in this filter'}</p>
+                      <p className="mt-1 text-xs font-medium leading-5 text-[#748078]">{nearbyUsesFallbackData && villaverdePlaces.length === 0 ? 'Reconnect and refresh the Places database, then try Nearby again.' : 'Try another category or choose All nearby.'}</p>
+                      {selectedCategory !== 'all' && (
+                        <button type="button" onClick={() => setSelectedCategory('all')} className="mt-4 rounded-full border border-[#C7D9C9] bg-[#EFF7EE] px-4 py-2.5 text-xs font-extrabold text-[#2B6A4E] transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20">Show all nearby</button>
+                      )}
+                    </div>
                   )}
                 </>
               )}
