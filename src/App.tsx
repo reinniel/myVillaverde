@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  AlertTriangle, Bookmark, Check, ChevronRight, MapPin, Navigation, RefreshCw, Search, X,
+  AlertTriangle, Check, ChevronRight, MapPin, Navigation, RefreshCw, Search, X,
 } from 'lucide-react';
 import type {
   AppMode, CategoryScope, GuideCategory, MapPanelView, ModalId, PlaceRecord,
@@ -341,13 +341,14 @@ export default function App() {
     onClose={() => setActiveModal(null)}
   >
     <SavedPlacesSheet
-      savedPlaces={savedPlaces}
-      recentlyViewedPlaces={recentlyViewedPlaces}
-      places={places}
-      userLocation={userLocation}
-      onOpenPlace={openPlacePage}
-      onToggleFavorite={handleToggleSavedPlace}
-    />
+  savedPlaces={savedPlaces}
+  recentlyViewedPlaces={recentlyViewedPlaces}
+  places={places}
+  dataState={placesDataState}
+  userLocation={userLocation}
+  onOpenPlace={openPlacePage}
+  onToggleFavorite={handleToggleSavedPlace}
+/>
   </BottomSheet>
 )}
 
