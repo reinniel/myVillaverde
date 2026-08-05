@@ -307,9 +307,13 @@ export default function App() {
 
               {mode === 'mo' && (
                 <VisitorDashboard
+                  places={places}
+                  dataState={placesDataState}
+                  isOnline={isOnline}
                   onOpenMap={() => openMap('visitor')}
                   onOpenModal={(modal) => modal === 'nearby' ? openMap('visitor', 'nearby') : setActiveModal(modal)}
                   onOpenCategory={(category) => openCategory('visitor', category)}
+                  onOpenPlace={openPlacePage}
                 />
               )}
             </div>
