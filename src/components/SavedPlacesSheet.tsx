@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle, Bookmark, Check, ChevronDown, ChevronRight, Clock3, Filter,
-  Heart, Layers3, MapPin, RefreshCw, Search, Trash2, X,
+  Heart, Layers3, MapPin, RefreshCw, Search, Trash2, WifiOff, X,
 } from 'lucide-react';
 import type {
   PlaceRecord, PlacesDataState, RecentlyViewedPlace, UserLocation,
@@ -12,9 +12,15 @@ import { EmptyState } from './EmptyState';
 
 const WANT_TO_VISIT_STORAGE_KEY = 'myVillaverde_wantToVisitPlaces_v2';
 const LEGACY_WANT_TO_VISIT_STORAGE_KEY = 'myVillaverde_wantToVisitPlaceIds_v1';
+const SAVED_VIEW_STORAGE_KEY = 'myVillaverde_savedViewPreferences_v1';
 
 type SavedCollectionId = 'favorites' | 'want-to-visit' | 'recent';
 type SavedGroupMode = 'none' | 'category' | 'barangay';
+
+interface SavedViewPreferences {
+  activeCollection: SavedCollectionId;
+  groupMode: SavedGroupMode;
+}
 
 interface SavedPlacesSheetProps {
   savedPlaces: PlaceRecord[];
@@ -24,6 +30,8 @@ interface SavedPlacesSheetProps {
   userLocation: UserLocation | null;
   onOpenPlace: (place: PlaceRecord) => void;
   onToggleFavorite: (place: PlaceRecord) => void;
+  onRemoveRecentlyViewed: (placeId: string) => void;
+  onClearRecentlyViewed: () => void;
 }
 
 const isStoredPlaceRecord = (value: unknown): value is PlaceRecord => {
@@ -69,6 +77,30 @@ const readLegacyWantToVisitIds = (): string[] => {
   }
 };
 
+const readSavedViewPreferences = (): SavedViewPreferences => {
+  try {
+    const raw = localStorage.getItem(SAVED_VIEW_STORAGE_KEY);
+    if (!raw) return { activeCollection: 'favorites', groupMode: 'none' };
+
+    const parsed = JSON.parse(raw) as Partial<SavedViewPreferences>;
+    const activeCollection = (
+      parsed.activeCollection === 'favorites'
+      || parsed.activeCollection === 'want-to-visit'
+      || parsed.activeCollection === 'recent'
+    ) ? parsed.activeCollection : 'favorites';
+    const groupMode = (
+      parsed.groupMode === 'none'
+      || parsed.groupMode === 'category'
+      || parsed.groupMode === 'barangay'
+    ) ? parsed.groupMode : 'none';
+
+    return { activeCollection, groupMode };
+  } catch (error) {
+    console.error('Failed to read saved view preferences', error);
+    return { activeCollection: 'favorites', groupMode: 'none' };
+  }
+};
+
 const dedupePlaces = (items: PlaceRecord[]) => {
   const seen = new Set<string>();
   return items.filter((place) => {
@@ -89,14 +121,19 @@ export const SavedPlacesSheet: React.FC<SavedPlacesSheetProps> = ({
   userLocation,
   onOpenPlace,
   onToggleFavorite,
+  onRemoveRecentlyViewed,
+  onClearRecentlyViewed,
 }) => {
-  const [activeCollection, setActiveCollection] = useState<SavedCollectionId>('favorites');
+  const initialViewPreferences = useMemo(readSavedViewPreferences, []);
+  const [activeCollection, setActiveCollection] = useState<SavedCollectionId>(
+    initialViewPreferences.activeCollection,
+  );
   const [wantToVisitSnapshots, setWantToVisitSnapshots] = useState<PlaceRecord[]>(readWantToVisitPlaces);
   const [legacyWantToVisitIds, setLegacyWantToVisitIds] = useState<string[]>(readLegacyWantToVisitIds);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [barangayFilter, setBarangayFilter] = useState<string>('all');
-  const [groupMode, setGroupMode] = useState<SavedGroupMode>('none');
+  const [groupMode, setGroupMode] = useState<SavedGroupMode>(initialViewPreferences.groupMode);
   const [showFilters, setShowFilters] = useState(false);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -107,6 +144,17 @@ export const SavedPlacesSheet: React.FC<SavedPlacesSheetProps> = ({
       console.error('Failed to save Want to Visit places', error);
     }
   }, [wantToVisitSnapshots]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        SAVED_VIEW_STORAGE_KEY,
+        JSON.stringify({ activeCollection, groupMode }),
+      );
+    } catch (error) {
+      console.error('Failed to save saved-view preferences', error);
+    }
+  }, [activeCollection, groupMode]);
 
   useEffect(() => {
     if (legacyWantToVisitIds.length === 0) return;
@@ -392,8 +440,8 @@ export const SavedPlacesSheet: React.FC<SavedPlacesSheetProps> = ({
         <ChevronRight className="h-4 w-4 shrink-0 text-[#748078]" aria-hidden="true" />
       </button>
 
-      {activeCollection !== 'recent' && (
-        <div className="mt-2 flex items-center justify-end gap-2 border-t border-[#E4E8E1] pt-2">
+      <div className="mt-2 flex items-center justify-end gap-2 border-t border-[#E4E8E1] pt-2">
+        {activeCollection !== 'recent' && (
           <button
             type="button"
             onClick={() => (
@@ -406,18 +454,26 @@ export const SavedPlacesSheet: React.FC<SavedPlacesSheetProps> = ({
             <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
             Move to {activeCollection === 'favorites' ? 'Want to Visit' : 'Favorites'}
           </button>
-          <button
-            type="button"
-            onClick={() => removeFromCurrentCollection(place)}
-            className="grid h-9 w-9 place-items-center rounded-full bg-[#FBE9E7] text-[#9B4338] transition active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#9B4338]/20"
-            aria-label={`Remove ${place.name} from ${
-              activeCollection === 'favorites' ? 'Favorites' : 'Want to Visit'
-            }`}
-          >
-            <Trash2 className="h-4 w-4" aria-hidden="true" />
-          </button>
-        </div>
-      )}
+        )}
+        <button
+          type="button"
+          onClick={() => (
+            activeCollection === 'recent'
+              ? onRemoveRecentlyViewed(place.id)
+              : removeFromCurrentCollection(place)
+          )}
+          className="grid h-9 w-9 place-items-center rounded-full bg-[#FBE9E7] text-[#9B4338] transition active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#9B4338]/20"
+          aria-label={`Remove ${place.name} from ${
+            activeCollection === 'favorites'
+              ? 'Favorites'
+              : activeCollection === 'want-to-visit'
+                ? 'Want to Visit'
+                : 'Recently Viewed'
+          }`}
+        >
+          <Trash2 className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </div>
     </article>
   );
 
@@ -497,6 +553,42 @@ export const SavedPlacesSheet: React.FC<SavedPlacesSheetProps> = ({
           >
             {isActive && (
               <>
+                {(dataState === 'offline' || dataState === 'snapshot') && (
+                  <div
+                    className="flex items-start gap-3 rounded-[20px] border border-[#E8D6AF] bg-[#FFF8E8] p-4"
+                    role="status"
+                  >
+                    <WifiOff
+                      className="mt-0.5 h-4 w-4 shrink-0 text-[#8A581F]"
+                      aria-hidden="true"
+                    />
+                    <div>
+                      <p className="text-sm font-extrabold text-[#6F451C]">
+                        {dataState === 'offline' ? 'You are offline' : 'Live place data is unavailable'}
+                      </p>
+                      <p className="mt-1 text-xs font-medium leading-5 text-[#7A644C]">
+                        Your saved collections remain available from this device. Some current place
+                        details may return when the live database reconnects.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {activeCollection === 'recent' && recentlyViewedPlaces.length > 0 && (
+                  <div className="flex items-center justify-between gap-3 rounded-[18px] border border-[#D9E0D8] bg-[#FFFDF7] px-3.5 py-2.5">
+                    <p className="text-xs font-bold text-[#748078]">
+                      Up to 20 recently opened places are kept on this device.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={onClearRecentlyViewed}
+                      className="shrink-0 rounded-full px-3 py-2 text-[10px] font-extrabold text-[#9B4338] transition active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#9B4338]/20"
+                    >
+                      Clear history
+                    </button>
+                  </div>
+                )}
+
                 {hasOrganizationControls && (
                   <section className="space-y-2.5" aria-label="Search and organize saved places">
                     <div className="relative">

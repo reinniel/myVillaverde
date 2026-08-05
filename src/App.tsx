@@ -86,7 +86,7 @@ export default function App() {
           const place = item as Partial<RecentlyViewedPlace>;
           return typeof place.id === 'string' && typeof place.name === 'string' && typeof place.categoryId === 'string' && typeof place.barangayName === 'string';
         })
-        .slice(0, 3);
+        .slice(0, 20);
     } catch (error) {
       console.error('Failed to read recently viewed places from localStorage', error);
       return [];
@@ -130,17 +130,38 @@ export default function App() {
 
   const placePage = placePageId ? places.find((place) => place.id === placePageId) ?? null : null;
 
+  const persistRecentlyViewedPlaces = (next: RecentlyViewedPlace[]) => {
+    try {
+      localStorage.setItem(RECENTLY_VIEWED_STORAGE_KEY, JSON.stringify(next));
+    } catch (error) {
+      console.error('Failed to save recently viewed places to localStorage', error);
+    }
+  };
+
+  const removeRecentlyViewedPlace = (placeId: string) => {
+    setRecentlyViewedPlaces((current) => {
+      const next = current.filter((place) => place.id !== placeId);
+      persistRecentlyViewedPlaces(next);
+      return next;
+    });
+  };
+
+  const clearRecentlyViewedPlaces = () => {
+    setRecentlyViewedPlaces([]);
+    try {
+      localStorage.removeItem(RECENTLY_VIEWED_STORAGE_KEY);
+    } catch (error) {
+      console.error('Failed to clear recently viewed places from localStorage', error);
+    }
+  };
+
   const rememberRecentlyViewedPlace = (place: PlaceRecord) => {
     setRecentlyViewedPlaces((current) => {
       const next: RecentlyViewedPlace[] = [
         { id: place.id, name: place.name, categoryId: place.categoryId, barangayName: place.barangay },
         ...current.filter((item) => item.id !== place.id),
-      ].slice(0, 3);
-      try {
-        localStorage.setItem(RECENTLY_VIEWED_STORAGE_KEY, JSON.stringify(next));
-      } catch (error) {
-        console.error('Failed to save recently viewed places to localStorage', error);
-      }
+      ].slice(0, 20);
+      persistRecentlyViewedPlaces(next);
       return next;
     });
   };
@@ -275,7 +296,7 @@ export default function App() {
               {mode === 'ko' && (
                 <LocalDashboard
                   activeBarangay={activeBarangay}
-                  recentlyViewedPlaces={recentlyViewedPlaces}
+                  recentlyViewedPlaces={recentlyViewedPlaces.slice(0, 3)}
                   onOpenBarangay={() => setActiveModal('barangay')}
                   onOpenMap={() => openMap('local')}
                   onOpenModal={(modal) => modal === 'nearby' ? openMap('local', 'nearby') : setActiveModal(modal)}
@@ -348,6 +369,8 @@ export default function App() {
   userLocation={userLocation}
   onOpenPlace={openPlacePage}
   onToggleFavorite={handleToggleSavedPlace}
+  onRemoveRecentlyViewed={removeRecentlyViewedPlace}
+  onClearRecentlyViewed={clearRecentlyViewedPlaces}
 />
   </BottomSheet>
 )}
