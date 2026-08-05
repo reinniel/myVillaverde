@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AlertTriangle, Bookmark, ChevronDown, ChevronRight, Clock3, Heart, MapPin, RefreshCw, Trash2,
+  AlertTriangle, Bookmark, Check, ChevronDown, ChevronRight, Clock3, Filter,
+  Heart, Layers3, MapPin, RefreshCw, Search, Trash2, X,
 } from 'lucide-react';
 import type {
   PlaceRecord, PlacesDataState, RecentlyViewedPlace, UserLocation,
 } from '../types/app';
-import { CATEGORY_MARKER_COLORS } from '../data/categories';
+import { CATEGORY_MARKER_COLORS, LOCAL_CATEGORIES } from '../data/categories';
 import { formatDistance, getDistanceMeters } from '../utils/places';
 import { EmptyState } from './EmptyState';
 
@@ -13,6 +14,7 @@ const WANT_TO_VISIT_STORAGE_KEY = 'myVillaverde_wantToVisitPlaces_v2';
 const LEGACY_WANT_TO_VISIT_STORAGE_KEY = 'myVillaverde_wantToVisitPlaceIds_v1';
 
 type SavedCollectionId = 'favorites' | 'want-to-visit' | 'recent';
+type SavedGroupMode = 'none' | 'category' | 'barangay';
 
 interface SavedPlacesSheetProps {
   savedPlaces: PlaceRecord[];
@@ -76,6 +78,9 @@ const dedupePlaces = (items: PlaceRecord[]) => {
   });
 };
 
+const getCategoryLabel = (categoryId: PlaceRecord['categoryId']) =>
+  LOCAL_CATEGORIES.find((category) => category.id === categoryId)?.title ?? categoryId;
+
 export const SavedPlacesSheet: React.FC<SavedPlacesSheetProps> = ({
   savedPlaces,
   recentlyViewedPlaces,
@@ -88,6 +93,11 @@ export const SavedPlacesSheet: React.FC<SavedPlacesSheetProps> = ({
   const [activeCollection, setActiveCollection] = useState<SavedCollectionId>('favorites');
   const [wantToVisitSnapshots, setWantToVisitSnapshots] = useState<PlaceRecord[]>(readWantToVisitPlaces);
   const [legacyWantToVisitIds, setLegacyWantToVisitIds] = useState<string[]>(readLegacyWantToVisitIds);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [barangayFilter, setBarangayFilter] = useState<string>('all');
+  const [groupMode, setGroupMode] = useState<SavedGroupMode>('none');
+  const [showFilters, setShowFilters] = useState(false);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   useEffect(() => {
@@ -168,14 +178,89 @@ export const SavedPlacesSheet: React.FC<SavedPlacesSheetProps> = ({
     },
   ];
 
-  const visiblePlaces = activeCollection === 'favorites'
+  const collectionPlaces = activeCollection === 'favorites'
     ? savedPlaces
     : activeCollection === 'want-to-visit'
       ? wantToVisitPlaces
       : recentPlaces;
 
+  const availableCategories = useMemo(
+    () => Array.from(new Set(collectionPlaces.map((place) => place.categoryId)))
+      .sort((first, second) => getCategoryLabel(first).localeCompare(getCategoryLabel(second))),
+    [collectionPlaces],
+  );
+
+  const availableBarangays = useMemo(
+    () => Array.from(new Set(collectionPlaces.map((place) => place.barangay)))
+      .sort((first, second) => first.localeCompare(second)),
+    [collectionPlaces],
+  );
+
+  useEffect(() => {
+    if (categoryFilter !== 'all' && !availableCategories.includes(categoryFilter as PlaceRecord['categoryId'])) {
+      setCategoryFilter('all');
+    }
+  }, [availableCategories, categoryFilter]);
+
+  useEffect(() => {
+    if (barangayFilter !== 'all' && !availableBarangays.includes(barangayFilter)) {
+      setBarangayFilter('all');
+    }
+  }, [availableBarangays, barangayFilter]);
+
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const filteredPlaces = useMemo(
+    () => collectionPlaces.filter((place) => {
+      const categoryLabel = getCategoryLabel(place.categoryId);
+      const matchesSearch = normalizedSearchQuery.length === 0 || [
+        place.name,
+        place.subcategory,
+        place.barangay,
+        place.categoryId,
+        categoryLabel,
+      ].some((value) => value.toLowerCase().includes(normalizedSearchQuery));
+
+      const matchesCategory = categoryFilter === 'all' || place.categoryId === categoryFilter;
+      const matchesBarangay = barangayFilter === 'all' || place.barangay === barangayFilter;
+
+      return matchesSearch && matchesCategory && matchesBarangay;
+    }),
+    [barangayFilter, categoryFilter, collectionPlaces, normalizedSearchQuery],
+  );
+
+  const groupedPlaces = useMemo(() => {
+    if (groupMode === 'none') {
+      return [{ key: 'all', label: '', places: filteredPlaces }];
+    }
+
+    const groups = new Map<string, PlaceRecord[]>();
+    filteredPlaces.forEach((place) => {
+      const key = groupMode === 'category' ? place.categoryId : place.barangay;
+      groups.set(key, [...(groups.get(key) ?? []), place]);
+    });
+
+    return Array.from(groups.entries())
+      .map(([key, groupPlaces]) => ({
+        key,
+        label: groupMode === 'category'
+          ? getCategoryLabel(key as PlaceRecord['categoryId'])
+          : key,
+        places: groupPlaces,
+      }))
+      .sort((first, second) => first.label.localeCompare(second.label));
+  }, [filteredPlaces, groupMode]);
+
   const activeIndex = collections.findIndex((collection) => collection.id === activeCollection);
   const activeCollectionLabel = collections[activeIndex]?.label ?? 'Saved places';
+  const hasActiveFilters = categoryFilter !== 'all' || barangayFilter !== 'all';
+  const hasOrganizationControls = collectionPlaces.length > 0;
+
+  const resetOrganization = () => {
+    setSearchQuery('');
+    setCategoryFilter('all');
+    setBarangayFilter('all');
+    setGroupMode('none');
+  };
 
   const focusCollection = (index: number) => {
     const nextIndex = (index + collections.length) % collections.length;
@@ -183,6 +268,9 @@ export const SavedPlacesSheet: React.FC<SavedPlacesSheetProps> = ({
     if (!nextCollection) return;
 
     setActiveCollection(nextCollection.id);
+    setSearchQuery('');
+    setCategoryFilter('all');
+    setBarangayFilter('all');
     window.requestAnimationFrame(() => tabRefs.current[nextIndex]?.focus());
   };
 
@@ -273,6 +361,66 @@ export const SavedPlacesSheet: React.FC<SavedPlacesSheetProps> = ({
   const isRestoring = unresolvedCount > 0 && dataState === 'loading';
   const hasUnresolvedItems = unresolvedCount > 0 && dataState !== 'loading';
 
+  const renderPlaceCard = (place: PlaceRecord) => (
+    <article
+      key={place.id}
+      className="rounded-[22px] border border-[#D9E0D8] bg-[#FFFDF7] p-2.5 shadow-xs"
+    >
+      <button
+        type="button"
+        onClick={() => onOpenPlace(place)}
+        className="flex w-full min-w-0 items-center gap-3 rounded-[18px] p-1 text-left transition active:scale-[0.99] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20"
+        aria-label={`Open ${place.name} place page`}
+      >
+        <span
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-white shadow-sm"
+          style={{ backgroundColor: CATEGORY_MARKER_COLORS[place.categoryId] }}
+        >
+          <MapPin className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-extrabold text-[#26372F]">
+            {place.name}
+          </span>
+          <span className="mt-0.5 block truncate text-xs font-medium text-[#748078]">
+            {place.subcategory} · {place.barangay}
+            {userLocation
+              ? ` · ${formatDistance(getDistanceMeters(userLocation, place))}`
+              : ''}
+          </span>
+        </span>
+        <ChevronRight className="h-4 w-4 shrink-0 text-[#748078]" aria-hidden="true" />
+      </button>
+
+      {activeCollection !== 'recent' && (
+        <div className="mt-2 flex items-center justify-end gap-2 border-t border-[#E4E8E1] pt-2">
+          <button
+            type="button"
+            onClick={() => (
+              activeCollection === 'favorites'
+                ? moveToWantToVisit(place)
+                : moveToFavorites(place)
+            )}
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-[#EEF1E8] px-3 text-[10px] font-extrabold text-[#526158] transition active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20"
+          >
+            <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+            Move to {activeCollection === 'favorites' ? 'Want to Visit' : 'Favorites'}
+          </button>
+          <button
+            type="button"
+            onClick={() => removeFromCurrentCollection(place)}
+            className="grid h-9 w-9 place-items-center rounded-full bg-[#FBE9E7] text-[#9B4338] transition active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#9B4338]/20"
+            aria-label={`Remove ${place.name} from ${
+              activeCollection === 'favorites' ? 'Favorites' : 'Want to Visit'
+            }`}
+          >
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+      )}
+    </article>
+  );
+
   return (
     <div className="space-y-4">
       <div
@@ -299,7 +447,12 @@ export const SavedPlacesSheet: React.FC<SavedPlacesSheetProps> = ({
               aria-selected={isActive}
               aria-controls={panelId}
               tabIndex={isActive ? 0 : -1}
-              onClick={() => setActiveCollection(collection.id)}
+              onClick={() => {
+                setActiveCollection(collection.id);
+                setSearchQuery('');
+                setCategoryFilter('all');
+                setBarangayFilter('all');
+              }}
               onKeyDown={(event) => handleCollectionKeyDown(event, index)}
               className={`min-w-0 rounded-[20px] border px-2 py-3 text-center transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20 ${
                 isActive
@@ -325,8 +478,8 @@ export const SavedPlacesSheet: React.FC<SavedPlacesSheetProps> = ({
       </div>
 
       <p className="sr-only" aria-live="polite">
-        {collections[activeIndex]?.count ?? 0} {activeCollectionLabel.toLowerCase()} place
-        {(collections[activeIndex]?.count ?? 0) === 1 ? '' : 's'}
+        {filteredPlaces.length} matching {activeCollectionLabel.toLowerCase()} place
+        {filteredPlaces.length === 1 ? '' : 's'}
       </p>
 
       {collections.map((collection) => {
@@ -344,6 +497,152 @@ export const SavedPlacesSheet: React.FC<SavedPlacesSheetProps> = ({
           >
             {isActive && (
               <>
+                {hasOrganizationControls && (
+                  <section className="space-y-2.5" aria-label="Search and organize saved places">
+                    <div className="relative">
+                      <label htmlFor="saved-place-search" className="sr-only">
+                        Search {activeCollectionLabel}
+                      </label>
+                      <Search
+                        className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#748078]"
+                        aria-hidden="true"
+                      />
+                      <input
+                        id="saved-place-search"
+                        type="search"
+                        value={searchQuery}
+                        onChange={(event) => setSearchQuery(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Escape' && searchQuery) {
+                            event.preventDefault();
+                            setSearchQuery('');
+                          }
+                        }}
+                        placeholder="Search name, category, or barangay"
+                        autoComplete="off"
+                        enterKeyHint="search"
+                        className="h-12 w-full appearance-none rounded-[22px] border border-[#D9E0D8] bg-[#FFFDF7] py-3 pl-11 pr-12 text-sm font-semibold text-[#26372F] shadow-xs outline-none transition focus:border-[#2B6A4E] focus:ring-4 focus:ring-[#2B6A4E]/15 placeholder:text-[#98A098]"
+                      />
+                      {searchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setSearchQuery('')}
+                          className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-[#EEF1E8] text-[#627066] transition active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20"
+                          aria-label="Clear saved-place search"
+                        >
+                          <X className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowFilters((current) => !current)}
+                        aria-expanded={showFilters}
+                        aria-controls="saved-place-filters"
+                        className={`inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-full border px-4 text-xs font-extrabold transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20 ${
+                          showFilters || hasActiveFilters
+                            ? 'border-[#2B6A4E] bg-[#E7F0E8] text-[#2B6A4E]'
+                            : 'border-[#D9E0D8] bg-[#FFFDF7] text-[#526158]'
+                        }`}
+                      >
+                        <Filter className="h-4 w-4" aria-hidden="true" />
+                        Filters{hasActiveFilters ? ' active' : ''}
+                      </button>
+
+                      <label className="sr-only" htmlFor="saved-group-mode">
+                        Group saved places
+                      </label>
+                      <div className="relative flex-1">
+                        <Layers3
+                          className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#627066]"
+                          aria-hidden="true"
+                        />
+                        <select
+                          id="saved-group-mode"
+                          value={groupMode}
+                          onChange={(event) => setGroupMode(event.target.value as SavedGroupMode)}
+                          className="h-10 w-full appearance-none rounded-full border border-[#D9E0D8] bg-[#FFFDF7] pl-10 pr-9 text-xs font-extrabold text-[#526158] outline-none transition focus:border-[#2B6A4E] focus:ring-4 focus:ring-[#2B6A4E]/15"
+                        >
+                          <option value="none">No grouping</option>
+                          <option value="category">By category</option>
+                          <option value="barangay">By barangay</option>
+                        </select>
+                        <ChevronDown
+                          className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#627066]"
+                          aria-hidden="true"
+                        />
+                      </div>
+                    </div>
+
+                    {showFilters && (
+                      <div
+                        id="saved-place-filters"
+                        className="grid grid-cols-2 gap-2 rounded-[20px] border border-[#D9E0D8] bg-[#F3F5EF] p-3"
+                      >
+                        <div>
+                          <label
+                            htmlFor="saved-category-filter"
+                            className="mb-1.5 block px-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#748078]"
+                          >
+                            Category
+                          </label>
+                          <select
+                            id="saved-category-filter"
+                            value={categoryFilter}
+                            onChange={(event) => setCategoryFilter(event.target.value)}
+                            className="h-10 w-full rounded-[16px] border border-[#D9E0D8] bg-[#FFFDF7] px-3 text-xs font-bold text-[#526158] outline-none focus:border-[#2B6A4E] focus:ring-4 focus:ring-[#2B6A4E]/15"
+                          >
+                            <option value="all">All categories</option>
+                            {availableCategories.map((categoryId) => (
+                              <option key={categoryId} value={categoryId}>
+                                {getCategoryLabel(categoryId)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label
+                            htmlFor="saved-barangay-filter"
+                            className="mb-1.5 block px-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#748078]"
+                          >
+                            Barangay
+                          </label>
+                          <select
+                            id="saved-barangay-filter"
+                            value={barangayFilter}
+                            onChange={(event) => setBarangayFilter(event.target.value)}
+                            className="h-10 w-full rounded-[16px] border border-[#D9E0D8] bg-[#FFFDF7] px-3 text-xs font-bold text-[#526158] outline-none focus:border-[#2B6A4E] focus:ring-4 focus:ring-[#2B6A4E]/15"
+                          >
+                            <option value="all">All barangays</option>
+                            {availableBarangays.map((barangay) => (
+                              <option key={barangay} value={barangay}>
+                                {barangay}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {hasActiveFilters && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCategoryFilter('all');
+                              setBarangayFilter('all');
+                            }}
+                            className="col-span-2 inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full bg-[#FFFDF7] text-xs font-extrabold text-[#526158] transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20"
+                          >
+                            <X className="h-3.5 w-3.5" aria-hidden="true" />
+                            Clear filters
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </section>
+                )}
+
                 {isRestoring && (
                   <div
                     className="flex items-start gap-3 rounded-[20px] border border-[#BFD2EA] bg-[#F2F7FF] p-4"
@@ -387,80 +686,66 @@ export const SavedPlacesSheet: React.FC<SavedPlacesSheetProps> = ({
                   </div>
                 )}
 
-                {visiblePlaces.length === 0 && unresolvedCount === 0 ? (
+                {collectionPlaces.length === 0 && unresolvedCount === 0 ? (
                   <EmptyState
                     icon={emptyCopy.icon}
                     title={emptyCopy.title}
                     message={emptyCopy.message}
                   />
-                ) : visiblePlaces.length > 0 ? (
-                  <div className="space-y-2.5">
-                    {visiblePlaces.map((place) => (
-                      <article
-                        key={place.id}
-                        className="rounded-[22px] border border-[#D9E0D8] bg-[#FFFDF7] p-2.5 shadow-xs"
-                      >
+                ) : filteredPlaces.length === 0 ? (
+                  <div className="space-y-3">
+                    <EmptyState
+                      icon={Search}
+                      title="No matching saved places"
+                      message="Try another name, category, or barangay, or clear the current filters."
+                    />
+                    <button
+                      type="button"
+                      onClick={resetOrganization}
+                      className="mx-auto flex min-h-10 items-center justify-center gap-2 rounded-full bg-[#26372F] px-5 text-xs font-extrabold text-white transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#26372F]/25"
+                    >
+                      <X className="h-4 w-4" aria-hidden="true" />
+                      Clear search and filters
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-3 px-1">
+                      <p className="text-xs font-bold text-[#748078]">
+                        {filteredPlaces.length} of {collectionPlaces.length} place
+                        {collectionPlaces.length === 1 ? '' : 's'}
+                      </p>
+                      {(normalizedSearchQuery || hasActiveFilters || groupMode !== 'none') && (
                         <button
                           type="button"
-                          onClick={() => onOpenPlace(place)}
-                          className="flex w-full min-w-0 items-center gap-3 rounded-[18px] p-1 text-left transition active:scale-[0.99] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20"
-                          aria-label={`Open ${place.name} place page`}
+                          onClick={resetOrganization}
+                          className="inline-flex min-h-8 items-center gap-1.5 rounded-full px-2.5 text-[10px] font-extrabold text-[#2B6A4E] transition active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20"
                         >
-                          <span
-                            className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-white shadow-sm"
-                            style={{ backgroundColor: CATEGORY_MARKER_COLORS[place.categoryId] }}
-                          >
-                            <MapPin className="h-5 w-5" aria-hidden="true" />
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm font-extrabold text-[#26372F]">
-                              {place.name}
-                            </span>
-                            <span className="mt-0.5 block truncate text-xs font-medium text-[#748078]">
-                              {place.subcategory} · {place.barangay}
-                              {userLocation
-                                ? ` · ${formatDistance(getDistanceMeters(userLocation, place))}`
-                                : ''}
-                            </span>
-                          </span>
-                          <ChevronRight
-                            className="h-4 w-4 shrink-0 text-[#748078]"
-                            aria-hidden="true"
-                          />
+                          <X className="h-3.5 w-3.5" aria-hidden="true" />
+                          Reset
                         </button>
+                      )}
+                    </div>
 
-                        {activeCollection !== 'recent' && (
-                          <div className="mt-2 flex items-center justify-end gap-2 border-t border-[#E4E8E1] pt-2">
-                            <button
-                              type="button"
-                              onClick={() => (
-                                activeCollection === 'favorites'
-                                  ? moveToWantToVisit(place)
-                                  : moveToFavorites(place)
-                              )}
-                              className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-[#EEF1E8] px-3 text-[10px] font-extrabold text-[#526158] transition active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20"
-                            >
-                              <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
-                              Move to {
-                                activeCollection === 'favorites' ? 'Want to Visit' : 'Favorites'
-                              }
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => removeFromCurrentCollection(place)}
-                              className="grid h-9 w-9 place-items-center rounded-full bg-[#FBE9E7] text-[#9B4338] transition active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#9B4338]/20"
-                              aria-label={`Remove ${place.name} from ${
-                                activeCollection === 'favorites' ? 'Favorites' : 'Want to Visit'
-                              }`}
-                            >
-                              <Trash2 className="h-4 w-4" aria-hidden="true" />
-                            </button>
+                    {groupedPlaces.map((group) => (
+                      <section key={group.key} className="space-y-2.5">
+                        {groupMode !== 'none' && (
+                          <div className="flex items-center gap-2 px-1">
+                            <h3 className="text-xs font-extrabold text-[#405047]">
+                              {group.label}
+                            </h3>
+                            <span className="rounded-full bg-[#E7F0E8] px-2 py-0.5 text-[10px] font-extrabold text-[#2B6A4E]">
+                              {group.places.length}
+                            </span>
                           </div>
                         )}
-                      </article>
+                        <div className="space-y-2.5">
+                          {group.places.map(renderPlaceCard)}
+                        </div>
+                      </section>
                     ))}
                   </div>
-                ) : null}
+                )}
               </>
             )}
           </div>
