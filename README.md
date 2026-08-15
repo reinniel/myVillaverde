@@ -6,17 +6,18 @@ myVillaverde is a mobile-first local guide for Villaverde, Nueva Vizcaya. It com
 
 - Phases 1–5 are complete.
 - Phase 6A, the visitor discovery home, is complete.
-- A recovery sprint is in progress to align the repository, data snapshot, and documentation.
-- Phase 6B, barangay discovery, resumes after the recovery baseline passes validation.
+- The Phase 6 recovery baseline and Phase 6B.1 barangay cards are complete.
+- Phase 6B.2, the barangay detail flow, is in progress.
 
-## Sources of truth
+## Working copy and checkpoints
 
-- **Application code:** the `main` branch of this GitHub repository.
+- **Active working app:** the linked Google AI Studio project.
+- **Versioned code mirror:** the `main` branch of this GitHub repository after a verified AI Studio commit.
 - **Place data:** the published `Places` tab configured by `DEFAULT_PLACES_CSV_URL` in `src/data/config.ts`.
 - **Offline place data:** generated `FALLBACK_PLACES` in `src/data/places.ts`.
 - **Roadmap:** the `myVillaverde Phases` Google Doc.
 
-Downloaded AI Studio ZIP files are snapshots of the app, not a separate code history. Reconcile intentional AI Studio changes into GitHub before continuing development.
+Google AI Studio syncs changes outward to GitHub; GitHub changes do not automatically flow back into the live AI Studio app. Make application changes in AI Studio first, verify them there, and then commit the matching checkpoint to GitHub. Downloaded ZIP files remain useful inspection snapshots but are not a separate code history.
 
 ## Local development
 
@@ -61,6 +62,6 @@ The sync command validates required columns, IDs, categories, and coordinates be
 - The live Google Sheet remains the authoritative directory; the repository snapshot is an offline fallback.
 - Place photos are shown only when a usable URL and approved permission are both present.
 - Ratings, popularity, and tourism claims are not invented from missing data.
-- Phase 6B must derive barangay identities from real available records and honest empty states.
+- Barangay cards and detail sheets derive counts, categories, and place links from the current database, including honest empty states.
 
 See `ARCHITECTURE.md` for module boundaries and data flow.

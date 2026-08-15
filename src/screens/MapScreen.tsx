@@ -25,6 +25,7 @@ export interface MapScreenProps {
   activeBarangay: Barangay;
   scope: CategoryScope;
   initialPanelView: MapPanelView;
+  initialBarangayId?: string | null;
   places: PlaceRecord[];
   placesDataState: PlacesDataState;
   placesLoadMessage: string;
@@ -42,6 +43,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
   activeBarangay,
   scope,
   initialPanelView,
+  initialBarangayId = null,
   places,
   placesDataState,
   placesLoadMessage,
@@ -54,15 +56,23 @@ export const MapScreen: React.FC<MapScreenProps> = ({
   onOpenPlacePage,
   onBack,
 }) => {
+  const initialVisitorBarangay = scope === 'visitor'
+    ? VILLAVERDE_BARANGAYS.find((barangay) => barangay.id === initialBarangayId) ?? null
+    : null;
   const viewKey = scope === 'local' ? `local:${activeBarangay.id}` : 'visitor';
-  const defaultCenter = scope === 'local' ? activeBarangay.coordinates : VILLAVERDE_CENTER;
-  const defaultZoom = scope === 'local' ? LOCAL_DEFAULT_ZOOM : VISITOR_DEFAULT_ZOOM;
-  const mapAccent = scope === 'local' ? activeBarangay.colors[0] : '#76527D';
+  const defaultCenter = scope === 'local'
+    ? activeBarangay.coordinates
+    : initialVisitorBarangay?.coordinates ?? VILLAVERDE_CENTER;
+  const defaultZoom = scope === 'local'
+    ? LOCAL_DEFAULT_ZOOM
+    : initialVisitorBarangay ? 16 : VISITOR_DEFAULT_ZOOM;
+  const mapAccent = scope === 'local'
+    ? activeBarangay.colors[0]
+    : initialVisitorBarangay?.colors[0] ?? '#76527D';
   const mapAccentSoft = `${mapAccent}18`;
-  const initialViewRef = useRef<StoredMapView>(readStoredMapView(viewKey) ?? {
-    center: defaultCenter,
-    zoom: defaultZoom,
-  });
+  const initialViewRef = useRef<StoredMapView>(initialVisitorBarangay
+    ? { center: initialVisitorBarangay.coordinates, zoom: 16 }
+    : readStoredMapView(viewKey) ?? { center: defaultCenter, zoom: defaultZoom });
   const mapRef = useRef<LeafletMap | null>(null);
   const prefersReducedMotion = usePrefersReducedMotion();
   const mapPanelTitleId = useId();
@@ -74,7 +84,9 @@ export const MapScreen: React.FC<MapScreenProps> = ({
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedBarangayId, setSelectedBarangayId] = useState<string | null>(scope === 'local' ? activeBarangay.id : null);
+  const [selectedBarangayId, setSelectedBarangayId] = useState<string | null>(
+    scope === 'local' ? activeBarangay.id : initialVisitorBarangay?.id ?? null,
+  );
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [mapZoom, setMapZoom] = useState(initialViewRef.current.zoom);
   const [viewportHeight, setViewportHeight] = useState(() => typeof window === 'undefined' ? 800 : Math.round(window.visualViewport?.height ?? window.innerHeight));
@@ -439,7 +451,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
 
   const recenterMap = () => {
     setSelectedPlaceId(null);
-    setSelectedBarangayId(scope === 'local' ? activeBarangay.id : null);
+    setSelectedBarangayId(scope === 'local' ? activeBarangay.id : initialVisitorBarangay?.id ?? null);
     moveMap(defaultCenter, defaultZoom);
   };
 
@@ -656,7 +668,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
         <div className="mt-3 flex items-center justify-between gap-3">
           <span className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-[#FFFDF7]/90 px-3 py-2 text-[11px] font-extrabold text-[#32463C] shadow-md backdrop-blur-md">
             <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: mapAccent }} />
-            {scope === 'local' ? activeBarangay.name : 'Visitor guide'}
+            {scope === 'local' ? activeBarangay.name : initialVisitorBarangay?.name ?? 'Visitor guide'}
           </span>
           <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-white shadow-md backdrop-blur-md ${placesDataState === 'live' ? 'bg-[#2B6A4E]/90' : placesDataState === 'loading' ? 'bg-[#526158]/85' : placesDataState === 'offline' ? 'bg-[#7A4B2B]/90' : 'bg-[#9A5A24]/90'}`} role="status" aria-live="polite">
             {placesDataState === 'loading' ? <RefreshCw className="h-3 w-3 animate-spin" /> : placesDataState === 'offline' ? <AlertTriangle className="h-3 w-3" /> : <Database className="h-3 w-3" />}
@@ -683,7 +695,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
           </div>
         )}
         {showRecenterControl && (
-          <button type="button" onClick={recenterMap} className="grid h-12 w-12 touch-manipulation place-items-center rounded-full border border-white/70 bg-[#FFFDF7]/95 text-[#26372F] shadow-lg backdrop-blur-md transition-all hover:bg-white active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/25" aria-label={scope === 'local' ? `Recenter on ${activeBarangay.name}` : 'Recenter on Villaverde'}>
+          <button type="button" onClick={recenterMap} className="grid h-12 w-12 touch-manipulation place-items-center rounded-full border border-white/70 bg-[#FFFDF7]/95 text-[#26372F] shadow-lg backdrop-blur-md transition-all hover:bg-white active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/25" aria-label={scope === 'local' ? `Recenter on ${activeBarangay.name}` : initialVisitorBarangay ? `Recenter on ${initialVisitorBarangay.name}` : 'Recenter on Villaverde'}>
             <MapPin className="h-5 w-5" style={{ color: mapAccent }} />
           </button>
         )}
@@ -1184,5 +1196,4 @@ export const MapScreen: React.FC<MapScreenProps> = ({
     </main>
   );
 };
-
 

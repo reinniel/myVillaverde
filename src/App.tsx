@@ -17,26 +17,49 @@ import { BottomSheet } from './components/BottomSheet';
 import { BarangayArtwork } from './components/BarangayArtwork';
 import { EmptyState } from './components/EmptyState';
 import { SavedPlacesSheet } from './components/SavedPlacesSheet';
+import { BarangayDetailSheet } from './components/BarangayDetailSheet';
 import { WelcomeLanding } from './screens/WelcomeLanding';
 import { LocalDashboard } from './screens/LocalDashboard';
 import { VisitorDashboard } from './screens/VisitorDashboard';
 import { MapScreen } from './screens/MapScreen';
 import { PlacePage } from './screens/PlacePage';
 import {
-  buildPlacePageUrl, readPlacePageIdFromUrl, removePlacePageFromUrl,
+  buildMapUrl, buildPlacePageUrl, buildVisitorBarangayUrl, readMapNavigationFromUrl,
+  readPlacePageIdFromUrl, readVisitorBarangayIdFromUrl, removeMapFromUrl,
+  removePlacePageFromUrl, removeVisitorBarangayFromUrl,
 } from './utils/placeNavigation';
 import {
   formatDistance, getDirectionsUrl, getDistanceMeters, placeMatchesGuideCategory,
 } from './utils/places';
 import './styles/app.css';
 
+const getValidBarangayId = (barangayId: string | null | undefined) =>
+  barangayId && VILLAVERDE_BARANGAYS.some((barangay) => barangay.id === barangayId)
+    ? barangayId
+    : null;
+
 export default function App() {
-  const [mode, setMode] = useState<AppMode>('home');
+  const [mode, setMode] = useState<AppMode>(() => {
+    const initialMapNavigation = readMapNavigationFromUrl();
+    if (initialMapNavigation?.scope === 'local') return 'ko';
+    if (initialMapNavigation?.scope === 'visitor' || getValidBarangayId(readVisitorBarangayIdFromUrl())) return 'mo';
+    return 'home';
+  });
   const [transitionDirection, setTransitionDirection] = useState<TransitionDirection>('neutral');
-  const [activeModal, setActiveModal] = useState<ModalId>(null);
-  const [mapScope, setMapScope] = useState<CategoryScope | null>(null);
+  const [activeModal, setActiveModal] = useState<ModalId>(() =>
+    !readPlacePageIdFromUrl() && !readMapNavigationFromUrl() && getValidBarangayId(readVisitorBarangayIdFromUrl())
+      ? 'visitor-barangay'
+      : null,
+  );
+  const [mapScope, setMapScope] = useState<CategoryScope | null>(() => readMapNavigationFromUrl()?.scope ?? null);
   const [placePageId, setPlacePageId] = useState<string | null>(() => readPlacePageIdFromUrl());
   const [mapInitialPanelView, setMapInitialPanelView] = useState<MapPanelView>('categories');
+  const [mapInitialBarangayId, setMapInitialBarangayId] = useState<string | null>(() =>
+    getValidBarangayId(readMapNavigationFromUrl()?.barangayId),
+  );
+  const [selectedVisitorBarangayId, setSelectedVisitorBarangayId] = useState<string | null>(() =>
+    getValidBarangayId(readVisitorBarangayIdFromUrl() ?? readMapNavigationFromUrl()?.barangayId),
+  );
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<SelectedCategory | null>(null);
   const [categorySearchQuery, setCategorySearchQuery] = useState('');
@@ -94,15 +117,30 @@ export default function App() {
   });
 
   useEffect(() => {
-    const syncPlacePageFromUrl = () => setPlacePageId(readPlacePageIdFromUrl());
-    window.addEventListener('popstate', syncPlacePageFromUrl);
+    const syncNavigationFromUrl = () => {
+      const nextPlacePageId = readPlacePageIdFromUrl();
+      const nextMapNavigation = readMapNavigationFromUrl();
+      const nextVisitorBarangayId = readVisitorBarangayIdFromUrl();
+      const validVisitorBarangayId = getValidBarangayId(nextVisitorBarangayId);
+      const validMapBarangayId = getValidBarangayId(nextMapNavigation?.barangayId);
+
+      setPlacePageId(nextPlacePageId);
+      setMapScope(nextMapNavigation?.scope ?? null);
+      setMapInitialPanelView('categories');
+      setMapInitialBarangayId(validMapBarangayId);
+      setSelectedVisitorBarangayId(validVisitorBarangayId ?? validMapBarangayId);
+      setActiveModal(!nextPlacePageId && !nextMapNavigation && validVisitorBarangayId ? 'visitor-barangay' : null);
+      if (nextMapNavigation?.scope === 'local') setMode('ko');
+      if (nextMapNavigation?.scope === 'visitor' || validVisitorBarangayId) setMode('mo');
+    };
+    window.addEventListener('popstate', syncNavigationFromUrl);
 
     const initialPlaceId = readPlacePageIdFromUrl();
     if (initialPlaceId && !window.history.state?.myVillaverdePlaceEntry) {
       window.history.replaceState({ ...window.history.state, myVillaverdeDirectPlace: true }, '', window.location.href);
     }
 
-    return () => window.removeEventListener('popstate', syncPlacePageFromUrl);
+    return () => window.removeEventListener('popstate', syncNavigationFromUrl);
   }, []);
 
   useEffect(() => {
@@ -127,6 +165,10 @@ export default function App() {
   const activeBarangay =
     VILLAVERDE_BARANGAYS.find((barangay) => barangay.name === selectedBarangay) ??
     VILLAVERDE_BARANGAYS.find((barangay) => barangay.name === 'Ibung')!;
+
+  const selectedVisitorBarangay = selectedVisitorBarangayId
+    ? VILLAVERDE_BARANGAYS.find((barangay) => barangay.id === selectedVisitorBarangayId) ?? null
+    : null;
 
   const placePage = placePageId ? places.find((place) => place.id === placePageId) ?? null : null;
 
@@ -245,11 +287,58 @@ export default function App() {
     setActiveModal('category');
   };
 
-  const openMap = (scope: CategoryScope, initialPanelView: MapPanelView = 'categories') => {
+  const openVisitorBarangay = (barangayId: string) => {
+    if (!getValidBarangayId(barangayId)) return;
+    window.history.pushState(
+      { ...window.history.state, myVillaverdeBarangayEntry: true, barangayId },
+      '',
+      buildVisitorBarangayUrl(barangayId),
+    );
+    setSelectedVisitorBarangayId(barangayId);
+    setActiveModal('visitor-barangay');
+  };
+
+  const closeVisitorBarangay = () => {
+    if (window.history.state?.myVillaverdeBarangayEntry) {
+      window.history.back();
+      return;
+    }
+    window.history.replaceState({ ...window.history.state, myVillaverdeBarangayEntry: false }, '', removeVisitorBarangayFromUrl());
+    setSelectedVisitorBarangayId(null);
+    setActiveModal(null);
+  };
+
+  const openMap = (
+    scope: CategoryScope,
+    initialPanelView: MapPanelView = 'categories',
+    initialBarangayId: string | null = null,
+  ) => {
+    const validInitialBarangayId = scope === 'visitor' ? getValidBarangayId(initialBarangayId) : null;
+    window.history.pushState(
+      { ...window.history.state, myVillaverdeMapEntry: true, mapScope: scope, barangayId: validInitialBarangayId },
+      '',
+      buildMapUrl(scope, validInitialBarangayId),
+    );
     setActiveModal(null);
     setMapInitialPanelView(initialPanelView);
+    setMapInitialBarangayId(validInitialBarangayId);
     setMapScope(scope);
     window.scrollTo({ top: 0, behavior: 'auto' });
+  };
+
+  const closeMap = () => {
+    if (window.history.state?.myVillaverdeMapEntry) {
+      window.history.back();
+      return;
+    }
+    const returnBarangayId = mapScope === 'visitor' ? mapInitialBarangayId : null;
+    window.history.replaceState({ ...window.history.state, myVillaverdeMapEntry: false }, '', removeMapFromUrl());
+    setMapScope(null);
+    setMapInitialBarangayId(null);
+    if (returnBarangayId) {
+      setSelectedVisitorBarangayId(returnBarangayId);
+      setActiveModal('visitor-barangay');
+    }
   };
 
   return (
@@ -274,6 +363,7 @@ export default function App() {
             activeBarangay={activeBarangay}
             scope={mapScope}
             initialPanelView={mapInitialPanelView}
+            initialBarangayId={mapInitialBarangayId}
             places={places}
             placesDataState={placesDataState}
             placesLoadMessage={placesLoadMessage}
@@ -284,7 +374,7 @@ export default function App() {
             onUserLocationChange={setUserLocation}
             onToggleSavedPlace={handleToggleSavedPlace}
             onOpenPlacePage={openPlacePage}
-            onBack={() => setMapScope(null)}
+            onBack={closeMap}
           />
         ) : (
           <>
@@ -314,6 +404,7 @@ export default function App() {
                   onOpenModal={(modal) => modal === 'nearby' ? openMap('visitor', 'nearby') : setActiveModal(modal)}
                   onOpenCategory={(category) => openCategory('visitor', category)}
                   onOpenPlace={openPlacePage}
+                  onOpenBarangay={openVisitorBarangay}
                 />
               )}
             </div>
@@ -355,6 +446,22 @@ export default function App() {
               );
             })}
           </div>
+        </BottomSheet>
+      )}
+
+      {activeModal === 'visitor-barangay' && selectedVisitorBarangay && (
+        <BottomSheet
+          title={selectedVisitorBarangay.name}
+          subtitle="Barangay guide · VillaverdeMo"
+          onClose={closeVisitorBarangay}
+        >
+          <BarangayDetailSheet
+            barangay={selectedVisitorBarangay}
+            places={places}
+            dataState={placesDataState}
+            onOpenPlace={openPlacePage}
+            onOpenMap={(barangayId) => openMap('visitor', 'categories', barangayId)}
+          />
         </BottomSheet>
       )}
 

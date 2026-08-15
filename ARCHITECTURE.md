@@ -25,7 +25,7 @@ The published Google Sheet is authoritative. Run `npm run data:sync` after canon
 ## Navigation and persistence
 
 - The app intentionally uses browser history without React Router.
-- Place-page URLs and Back/Forward behavior are coordinated through the existing navigation utilities and app orchestration.
+- Place-page, visitor-barangay, and focused-map URLs use query parameters coordinated by `placeNavigation.ts` and `App.tsx`, so Back/Forward restores the correct surface without React Router.
 - Selected barangay, map view, favorites, Want to Visit, and recently viewed data are stored locally under versioned keys.
 - Saved-place migrations preserve older ID-only entries until their live records can be restored.
 
@@ -40,10 +40,11 @@ The published Google Sheet is authoritative. Run `npm run data:sync` after canon
 
 ## Current delivery sequence
 
-1. Keep GitHub `main` authoritative and treat AI Studio ZIPs as snapshots.
+1. Keep Google AI Studio as the active working copy and GitHub `main` as its verified versioned mirror.
 2. Keep the generated fallback synchronized with the live Places source.
-3. Run typecheck and production build checks before publishing changes.
-4. Resume Phase 6B barangay discovery on the verified baseline.
+3. Run typecheck, production build, and preview checks before committing from AI Studio to GitHub.
+4. Confirm the GitHub checkpoint matches the verified AI Studio state.
+5. Complete and verify the Phase 6B.2 barangay detail flow on the verified baseline.
 
 ## Deferred decisions
 

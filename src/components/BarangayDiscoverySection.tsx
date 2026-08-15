@@ -1,42 +1,25 @@
 import React, { useMemo } from 'react';
-import { MapPin } from 'lucide-react';
+import { ChevronRight, MapPin } from 'lucide-react';
 import { VILLAVERDE_BARANGAYS } from '../data/barangays';
-import type { MapCategoryId, PlaceRecord, PlacesDataState } from '../types/app';
+import type { PlaceRecord, PlacesDataState } from '../types/app';
+import { getBarangayCategoryLabels, getBarangayPlaces } from '../utils/barangayDiscovery';
 import { BarangayArtwork } from './BarangayArtwork';
 
 interface BarangayDiscoverySectionProps {
   places: PlaceRecord[];
   dataState: PlacesDataState;
+  onOpenBarangay: (barangayId: string) => void;
 }
-
-const CATEGORY_LABELS: Record<Exclude<MapCategoryId, 'all'>, string> = {
-  food: 'Food & drinks',
-  services: 'Shops & services',
-  transport: 'Transport',
-  visit: 'Places to visit',
-  government: 'Public services',
-};
-
-const CATEGORY_ORDER: Exclude<MapCategoryId, 'all'>[] = [
-  'food',
-  'services',
-  'transport',
-  'visit',
-  'government',
-];
 
 export const BarangayDiscoverySection: React.FC<BarangayDiscoverySectionProps> = ({
   places,
   dataState,
+  onOpenBarangay,
 }) => {
   const barangayCards = useMemo(
     () => VILLAVERDE_BARANGAYS.map((barangay) => {
-      const barangayPlaces = places
-        .filter((place) => place.barangay === barangay.name)
-        .sort((first, second) => first.name.localeCompare(second.name));
-      const representedCategories = CATEGORY_ORDER
-        .filter((categoryId) => barangayPlaces.some((place) => place.categoryId === categoryId))
-        .map((categoryId) => CATEGORY_LABELS[categoryId]);
+      const barangayPlaces = getBarangayPlaces(places, barangay.name);
+      const representedCategories = getBarangayCategoryLabels(barangayPlaces);
 
       return {
         barangay,
@@ -108,10 +91,12 @@ export const BarangayDiscoverySection: React.FC<BarangayDiscoverySectionProps> =
             const listingLabel = `${barangayPlaces.length} ${barangayPlaces.length === 1 ? 'listing' : 'listings'}`;
 
             return (
-              <article
+              <button
+                type="button"
                 key={barangay.id}
-                aria-labelledby={`visitor-barangay-${barangay.id}`}
-                className="w-[272px] shrink-0 snap-start overflow-hidden rounded-[26px] border border-[#D7DED4] bg-[#FFFDF7] shadow-xs"
+                onClick={() => onOpenBarangay(barangay.id)}
+                aria-label={`Open ${barangay.name}: ${listingLabel}`}
+                className="w-[272px] shrink-0 snap-start touch-manipulation overflow-hidden rounded-[26px] border border-[#D7DED4] bg-[#FFFDF7] text-left shadow-xs transition-all hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.99] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#76527D]/25"
               >
                 <div
                   className="relative h-[126px] overflow-hidden p-4 text-white"
@@ -125,26 +110,25 @@ export const BarangayDiscoverySection: React.FC<BarangayDiscoverySectionProps> =
                     <span className="w-fit rounded-full border border-white/25 bg-black/15 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.1em] text-white backdrop-blur-sm">
                       {listingLabel}
                     </span>
-                    <h3
-                      id={`visitor-barangay-${barangay.id}`}
+                    <span
                       className={`font-serif-header font-bold leading-[1.02] text-white drop-shadow-sm ${barangay.name.length > 16 ? 'text-[21px]' : 'text-[24px]'}`}
                     >
                       {barangay.name}
-                    </h3>
+                    </span>
                   </div>
                 </div>
 
-                <div className="min-h-[194px] p-4">
+                <span className="flex min-h-[194px] flex-col p-4">
                   {barangayPlaces.length === 0 ? (
-                    <div className="flex min-h-[150px] flex-col justify-center">
-                      <p className="text-sm font-extrabold text-[#26372F]">No places listed yet</p>
-                      <p className="mt-2 text-xs font-medium leading-5 text-[#748078]">
+                    <span className="flex flex-1 flex-col justify-center">
+                      <span className="text-sm font-extrabold text-[#26372F]">No places listed yet</span>
+                      <span className="mt-2 text-xs font-medium leading-5 text-[#748078]">
                         The shared guide does not currently have a listing for this barangay.
-                      </p>
-                    </div>
+                      </span>
+                    </span>
                   ) : (
                     <>
-                      <div className="flex flex-wrap gap-1.5" aria-label={`Categories represented in ${barangay.name}`}>
+                      <span className="flex flex-wrap gap-1.5" aria-label={`Categories represented in ${barangay.name}`}>
                         {representedCategories.map((category) => (
                           <span
                             key={category}
@@ -153,32 +137,36 @@ export const BarangayDiscoverySection: React.FC<BarangayDiscoverySectionProps> =
                             {category}
                           </span>
                         ))}
-                      </div>
+                      </span>
 
-                      <p className="mt-4 text-[9px] font-extrabold uppercase tracking-[0.12em] text-[#8A948C]">
+                      <span className="mt-4 text-[9px] font-extrabold uppercase tracking-[0.12em] text-[#8A948C]">
                         Listed in the guide
-                      </p>
-                      <ul className="mt-2 space-y-2">
+                      </span>
+                      <span className="mt-2 space-y-2">
                         {visiblePlaces.map((place) => (
-                          <li key={place.id} className="flex items-start gap-2 text-xs font-bold leading-4 text-[#35463E]">
+                          <span key={place.id} className="flex items-start gap-2 text-xs font-bold leading-4 text-[#35463E]">
                             <span
                               className="mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full"
                               style={{ backgroundColor: barangay.colors[0] }}
                               aria-hidden="true"
                             />
                             <span className="line-clamp-1">{place.name}</span>
-                          </li>
+                          </span>
                         ))}
-                      </ul>
+                      </span>
                       {remainingPlaceCount > 0 && (
-                        <p className="mt-3 text-[10px] font-extrabold text-[#76527D]">
+                        <span className="mt-3 text-[10px] font-extrabold text-[#76527D]">
                           +{remainingPlaceCount} more {remainingPlaceCount === 1 ? 'listing' : 'listings'}
-                        </p>
+                        </span>
                       )}
                     </>
                   )}
-                </div>
-              </article>
+                  <span className="mt-auto flex items-center justify-between border-t border-[#E3E8E0] pt-3 text-[10px] font-extrabold text-[#76527D]">
+                    View barangay
+                    <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                </span>
+              </button>
             );
           })}
         </div>

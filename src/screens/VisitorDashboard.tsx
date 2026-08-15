@@ -19,6 +19,7 @@ export interface VisitorDashboardProps {
   onOpenModal: (modal: Exclude<ModalId, null>) => void;
   onOpenCategory: (category: GuideCategory) => void;
   onOpenPlace: (place: PlaceRecord) => void;
+  onOpenBarangay: (barangayId: string) => void;
 }
 
 interface DiscoverySection {
@@ -86,6 +87,7 @@ export const VisitorDashboard: React.FC<VisitorDashboardProps> = ({
   onOpenModal,
   onOpenCategory,
   onOpenPlace,
+  onOpenBarangay,
 }) => {
   const handleVisitorCategory = (category: GuideCategory) => {
     if (category.id === 'getting-around') {
@@ -232,7 +234,7 @@ export const VisitorDashboard: React.FC<VisitorDashboardProps> = ({
         </button>
       </section>
 
-      <BarangayDiscoverySection places={places} dataState={dataState} />
+      <BarangayDiscoverySection places={places} dataState={dataState} onOpenBarangay={onOpenBarangay} />
 
       <CategoryList
         title="Browse by visitor need"
