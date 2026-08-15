@@ -8,6 +8,7 @@ import type {
 } from '../types/app';
 import { VISITOR_CATEGORIES, CATEGORY_MARKER_COLORS } from '../data/categories';
 import { CategoryList } from '../components/CategoryList';
+import { BarangayDiscoverySection } from '../components/BarangayDiscoverySection';
 import { EmptyState } from '../components/EmptyState';
 
 export interface VisitorDashboardProps {
@@ -230,6 +231,8 @@ export const VisitorDashboard: React.FC<VisitorDashboardProps> = ({
           </span>
         </button>
       </section>
+
+      <BarangayDiscoverySection places={places} dataState={dataState} />
 
       <CategoryList
         title="Browse by visitor need"
