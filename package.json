@@ -7,7 +7,10 @@
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "check": "npm run lint && npm run build",
+    "data:sync": "node scripts/sync-places-fallback.mjs",
+    "data:check": "node scripts/sync-places-fallback.mjs --check"
   },
   "dependencies": {
     "lucide-react": "^0.546.0",

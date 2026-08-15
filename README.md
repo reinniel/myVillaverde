@@ -1,44 +1,66 @@
-# myVillaverde Phase 5A.1 — Saved robustness and accessibility
+# myVillaverde
 
-This hardening patch addresses the review findings before Phase 5B.
+myVillaverde is a mobile-first local guide for Villaverde, Nueva Vizcaya. It combines barangay-aware discovery, a live places directory, maps, nearby results, place pages, saved collections, and the VillaverdeMo visitor experience.
 
-## Replace
+## Project status
 
-Replace this file completely:
+- Phases 1–5 are complete.
+- Phase 6A, the visitor discovery home, is complete.
+- A recovery sprint is in progress to align the repository, data snapshot, and documentation.
+- Phase 6B, barangay discovery, resumes after the recovery baseline passes validation.
 
-- `src/components/SavedPlacesSheet.tsx`
+## Sources of truth
 
-## Update App.tsx
+- **Application code:** the `main` branch of this GitHub repository.
+- **Place data:** the published `Places` tab configured by `DEFAULT_PLACES_CSV_URL` in `src/data/config.ts`.
+- **Offline place data:** generated `FALLBACK_PLACES` in `src/data/places.ts`.
+- **Roadmap:** the `myVillaverde Phases` Google Doc.
 
-Apply `phase-5a1.patch`, or make these two edits manually:
+Downloaded AI Studio ZIP files are snapshots of the app, not a separate code history. Reconcile intentional AI Studio changes into GitHub before continuing development.
 
-1. Remove `Bookmark` from the `lucide-react` import in `src/App.tsx`.
-2. Pass `dataState={placesDataState}` into `<SavedPlacesSheet />`.
+## Local development
 
-## What changed
+Requirements: Node.js 20 or newer and npm.
 
-- Want to Visit now stores full `PlaceRecord` snapshots in
-  `myVillaverde_wantToVisitPlaces_v2`.
-- Existing ID-only entries from `myVillaverde_wantToVisitPlaceIds_v1` migrate
-  automatically when their live records become available.
-- Unresolved entries remain stored and show a restoring/unavailable notice
-  instead of a false empty state.
-- Recently Viewed also avoids a false empty state while place data is loading.
-- The collection tabs now have:
-  - matching `tab` / `tabpanel` IDs
-  - `aria-controls` and `aria-labelledby`
-  - roving `tabIndex`
-  - Left/Right and Home/End keyboard navigation
-- The dead `Bookmark` import in `App.tsx` is removed.
+```bash
+npm install
+npm run dev
+```
 
-## Test before committing
+Useful checks:
 
-1. Put at least one place in Want to Visit.
-2. Reload on a throttled or slow connection.
-3. Confirm the list never claims it is empty while restoring.
-4. Confirm Left/Right and Home/End move keyboard focus between collection tabs.
-5. Confirm Favorites and Recently Viewed still open exact place pages.
+```bash
+npm run lint
+npm run build
+npm run check
+```
 
-Commit:
+## Places data flow
 
-`fix: harden saved collections and migration`
+At runtime, `usePlacesData` requests the published Google Sheets CSV once and normalizes it into `PlaceRecord` objects. If that request is unavailable, the app uses the generated fallback snapshot so core discovery remains usable offline.
+
+After changing the canonical Places sheet, regenerate and review the fallback:
+
+```bash
+npm run data:sync
+npm run data:check
+```
+
+For a local CSV export instead of the published URL:
+
+```bash
+npm run data:sync -- --source ./places.csv
+npm run data:check -- --source ./places.csv
+```
+
+The sync command validates required columns, IDs, categories, and coordinates before replacing `src/data/places.ts`. Commit the generated change with the related data update.
+
+## Current product boundaries
+
+- The app is a client-side Vite and React application.
+- The live Google Sheet remains the authoritative directory; the repository snapshot is an offline fallback.
+- Place photos are shown only when a usable URL and approved permission are both present.
+- Ratings, popularity, and tourism claims are not invented from missing data.
+- Phase 6B must derive barangay identities from real available records and honest empty states.
+
+See `ARCHITECTURE.md` for module boundaries and data flow.
