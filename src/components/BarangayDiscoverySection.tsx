@@ -96,7 +96,7 @@ export const BarangayDiscoverySection: React.FC<BarangayDiscoverySectionProps> =
                 key={barangay.id}
                 onClick={() => onOpenBarangay(barangay.id)}
                 aria-label={`Open ${barangay.name}: ${listingLabel}`}
-                className="w-[272px] shrink-0 snap-start touch-manipulation overflow-hidden rounded-[26px] border border-[#D7DED4] bg-[#FFFDF7] text-left shadow-xs transition-all hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.99] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#76527D]/25"
+                className="flex h-[412px] w-[272px] shrink-0 snap-start touch-manipulation flex-col overflow-hidden rounded-[26px] border border-[#D7DED4] bg-[#FFFDF7] text-left shadow-xs transition-all hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.99] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#76527D]/25"
               >
                 <div
                   className="relative h-[126px] overflow-hidden p-4 text-white"
@@ -118,7 +118,7 @@ export const BarangayDiscoverySection: React.FC<BarangayDiscoverySectionProps> =
                   </div>
                 </div>
 
-                <span className="flex min-h-[194px] flex-col p-4">
+                <span className="flex min-h-0 flex-1 flex-col p-4">
                   {barangayPlaces.length === 0 ? (
                     <span className="flex flex-1 flex-col justify-center">
                       <span className="text-sm font-extrabold text-[#26372F]">No places listed yet</span>
