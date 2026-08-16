@@ -2,7 +2,19 @@ node_modules/
 build/
 dist/
 coverage/
-.DS_Store
-*.log
+*.tsbuildinfo
+
+# Local configuration
 .env*
 !.env.example
+
+# AI Studio handoff archives
+*.zip
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+
+# Logs
+*.log

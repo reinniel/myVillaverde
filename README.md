@@ -1,72 +1,109 @@
-# myVillaverde
+<div align="center">
 
-myVillaverde is a mobile-first local guide for Villaverde, Nueva Vizcaya. It combines barangay-aware discovery, a live places directory, maps, nearby results, place pages, saved collections, and the VillaverdeMo visitor experience.
+<h1>myVillaverde</h1>
 
-## Project status
+<p><strong>A mobile-first local guide for Villaverde, Nueva Vizcaya.</strong></p>
 
-- Phases 1–5 are complete.
-- Phase 6A, the visitor discovery home, is complete.
-- The Phase 6 recovery baseline and Phase 6B.1 barangay cards are complete.
-- Phase 6B.2, the barangay detail flow, is complete.
-- Phase 6C, the ID-backed visitor trip planner and multi-stop route flow, is complete.
-- Phase 6D, the final release-hardening and regression pass, is complete.
+<p>
+  <img alt="Version 1.0.0" src="https://img.shields.io/badge/version-1.0.0-2B6A4E">
+  <img alt="Status stable" src="https://img.shields.io/badge/status-stable-2B6A4E">
+  <img alt="Verify workflow" src="https://github.com/reinniel/myVillaverde/actions/workflows/verify.yml/badge.svg">
+  <img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white">
+  <img alt="Vite" src="https://img.shields.io/badge/Vite-6.4-646CFF?logo=vite&logoColor=white">
+</p>
 
-## Working copy and checkpoints
+<p>
+  Find verified local places, explore the map, browse by barangay, save discoveries,
+  and build a multi-stop trip using one shared place database.
+</p>
 
-- **Active working app:** the linked Google AI Studio project.
-- **Versioned code mirror:** the `main` branch of this GitHub repository after a verified AI Studio commit.
-- **Place data:** the published `Places` tab configured by `DEFAULT_PLACES_CSV_URL` in `src/data/config.ts`.
-- **Offline place data:** generated `FALLBACK_PLACES` in `src/data/places.ts`.
-- **Roadmap:** the `myVillaverde Development Roadmap` Google Doc.
+</div>
 
-Google AI Studio syncs changes outward to GitHub; GitHub changes do not automatically flow back into the live AI Studio app. Make application changes in AI Studio first, verify them there, and then commit the matching checkpoint to GitHub. Downloaded ZIP files remain useful inspection snapshots but are not a separate code history.
+## Preview
 
-## Local development
+<p align="center">
+  <img src="docs/assets/villaverdeko-home.png" width="300" alt="VillaverdeKo local dashboard">
+  &nbsp;&nbsp;
+  <img src="docs/assets/villaverdemo-home.png" width="300" alt="VillaverdeMo visitor dashboard">
+</p>
+
+## What it does
+
+- **VillaverdeKo** gives residents barangay-aware discovery, nearby places, saved collections, and direct map access.
+- **VillaverdeMo** gives visitors curated discovery, barangay guides, place pages, saved collections, and a four-stop trip planner.
+- **Explore Map** combines search, category filters, persistent map state, focused barangay views, and location-aware nearby results.
+- **Live place data** comes from the published Villaverde Places database, with a generated 28-place fallback for offline use.
+- **Resilient states** cover loading, offline use, reconnecting, unavailable records, reduced motion, browser zoom, and render recovery.
+
+## Product principles
+
+- Show only real places from the shared database.
+- Keep unknown information unknown instead of inventing ratings, popularity, or operating details.
+- Display photos only when a usable URL and approved permission are present.
+- Store lightweight local preferences and place IDs rather than duplicating authoritative place records.
+- Keep the core guide useful when the live database cannot be reached.
+
+## Technology
+
+| Area | Stack |
+| --- | --- |
+| Interface | React 19, TypeScript, Tailwind CSS 4 |
+| Build | Vite 6 |
+| Maps | Leaflet, React Leaflet, OpenStreetMap |
+| Data | Published Google Sheets CSV with a generated TypeScript fallback |
+| Persistence | Browser local storage |
+| Directions | Google Maps URLs |
+
+## Getting started
 
 Requirements: Node.js 20 or newer and npm.
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-Useful checks:
+The development server runs at `http://localhost:3000`.
+
+## Verification
 
 ```bash
-npm run lint
-npm run build
-npm run check
 npm run verify
 ```
 
-## Places data flow
+The release gate checks that the offline fallback matches the live Places database, runs TypeScript validation, and creates a forced production build. The same gate runs automatically on pushes and pull requests through GitHub Actions.
 
-At runtime, `usePlacesData` requests the published Google Sheets CSV once and normalizes it into `PlaceRecord` objects. If that request is unavailable, the app uses the generated fallback snapshot so core discovery remains usable offline.
+Useful individual commands:
 
-After changing the canonical Places sheet, regenerate and review the fallback:
+| Command | Purpose |
+| --- | --- |
+| `npm run lint` | Run TypeScript validation without emitting files |
+| `npm run build` | Create a production-optimized Vite build |
+| `npm run check` | Run TypeScript validation and the production build |
+| `npm run data:check` | Compare the fallback with the live Places database |
+| `npm run data:sync` | Regenerate the fallback from the live Places database |
 
-```bash
-npm run data:sync
-npm run data:check
-```
+## Project structure
 
-For a local CSV export instead of the published URL:
+| Path | Responsibility |
+| --- | --- |
+| `src/App.tsx` | Application state, navigation, and screen orchestration |
+| `src/screens/` | Landing, dashboards, map, and place pages |
+| `src/components/` | Reusable sheets, cards, galleries, and recovery UI |
+| `src/hooks/` | Live place loading and online/offline transitions |
+| `src/data/` | Categories, barangays, configuration, and fallback places |
+| `src/utils/` | Place normalization, filtering, navigation, distance, and map helpers |
+| `scripts/` | Data synchronization and production-build enforcement |
 
-```bash
-npm run data:sync -- --source ./places.csv
-npm run data:check -- --source ./places.csv
-```
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full application boundaries and data flow.
 
-The sync command validates required columns, IDs, categories, and coordinates before replacing `src/data/places.ts`. Commit the generated change with the related data update. `npm run verify` combines the live/fallback data check, TypeScript validation, and a forced production build for release handoffs.
+## Data source
 
-## Current product boundaries
+The published Villaverde Places database is authoritative. Runtime data is normalized into shared `PlaceRecord` objects; duplicate and permanently closed rows are excluded. When the live feed is unavailable, the app uses the generated snapshot in `src/data/places.ts`.
 
-- The app is a client-side Vite and React application.
-- The live Google Sheet remains the authoritative directory; the repository snapshot is an offline fallback.
-- Place photos are shown only when a usable URL and approved permission are both present.
-- Ratings, popularity, and tourism claims are not invented from missing data.
-- Barangay cards and detail sheets derive counts, categories, and place links from the current database, including honest empty states.
-- Trip plans store only ordered place IDs, resolve every stop against the current database, prevent duplicates, and open routes through Google Maps.
-- Browser zoom remains available, reduced-motion preferences are respected, and a top-level recovery screen protects locally persisted data from render failures.
+## Release
 
-See `ARCHITECTURE.md` for module boundaries and data flow.
+**Current version:** `1.0.0`
+
+Phases 1 through 6 are complete. Google AI Studio remains the active working copy, while GitHub `main` is the verified versioned mirror.
