@@ -4,7 +4,7 @@ import {
   Store, Utensils, Mountain, Building2, WifiOff,
 } from 'lucide-react';
 import type {
-  GuideCategory, ModalId, PlaceRecord, PlacesDataState,
+  DashboardModalId, GuideCategory, PlaceRecord, PlacesDataState,
 } from '../types/app';
 import { VISITOR_CATEGORIES, CATEGORY_MARKER_COLORS } from '../data/categories';
 import { CategoryList } from '../components/CategoryList';
@@ -16,7 +16,7 @@ export interface VisitorDashboardProps {
   dataState: PlacesDataState;
   isOnline: boolean;
   onOpenMap: () => void;
-  onOpenModal: (modal: Exclude<ModalId, null>) => void;
+  onOpenModal: (modal: DashboardModalId) => void;
   onOpenCategory: (category: GuideCategory) => void;
   onOpenPlace: (place: PlaceRecord) => void;
   onOpenBarangay: (barangayId: string) => void;

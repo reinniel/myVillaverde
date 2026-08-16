@@ -3,10 +3,17 @@ import type React from 'react';
 export type AppMode = 'home' | 'ko' | 'mo';
 export type TransitionDirection = 'left' | 'right' | 'neutral';
 export type ModalId = 'barangay' | 'visitor-barangay' | 'saved' | 'trip' | 'nearby' | 'category' | null;
+export type DashboardModalId = Extract<ModalId, 'saved' | 'trip' | 'nearby'>;
 export type CategoryScope = 'local' | 'visitor';
 export type MapCategoryId = 'all' | 'food' | 'services' | 'transport' | 'visit' | 'government';
 export type MapPanelView = 'categories' | 'layers' | 'nearby' | 'location';
 export type MapSheetLevel = 0 | 1 | 2;
+
+export interface MapReturnState {
+  panelView: MapPanelView;
+  categoryId: MapCategoryId;
+  selectedPlaceId: string | null;
+}
 
 export interface Barangay {
   id: string;
@@ -80,7 +87,7 @@ export interface PlaceRecord {
   photoPermission?: string;
 }
 
-export type PlacesDataState = 'loading' | 'live' | 'snapshot' | 'offline';
+export type PlacesDataState = 'loading' | 'live' | 'cached' | 'snapshot' | 'offline';
 export type MapTileState = 'loading' | 'ready' | 'error';
 export type LocationStatus = 'idle' | 'requesting' | 'granted' | 'denied' | 'unavailable' | 'error';
 

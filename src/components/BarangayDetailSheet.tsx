@@ -60,7 +60,7 @@ export const BarangayDetailSheet: React.FC<BarangayDetailSheetProps> = ({
       {dataState !== 'live' && dataState !== 'loading' && !isUnavailable && (
         <div className="flex items-start gap-2.5 rounded-[18px] border border-[#E7D6B2] bg-[#FFF8E8] px-3.5 py-3 text-xs font-medium leading-5 text-[#765A36]" role="status">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#9A5A24]" aria-hidden="true" />
-          <span>{dataState === 'offline' ? 'You are offline. Showing the last available barangay listings.' : 'The live database could not be reached. Showing the built-in place snapshot.'}</span>
+          <span>{dataState === 'offline' ? 'You are offline. Showing the last available barangay listings.' : dataState === 'cached' ? 'The latest refresh failed. Showing the last successful live barangay listings.' : 'The live database could not be reached. Showing the built-in place snapshot.'}</span>
         </div>
       )}
 

@@ -53,14 +53,16 @@ export const parseCsv = (csvText: string): string[][] => {
   return rows;
 };
 
-const isSupportedPhotoUrl = (value: string) => {
+export const getSafeHttpUrl = (value: string) => {
   try {
-    const url = new URL(value);
-    return url.protocol === 'https:' || url.protocol === 'http:';
+    const url = new URL(value.trim());
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url.toString() : '';
   } catch {
-    return false;
+    return '';
   }
 };
+
+const isSupportedPhotoUrl = (value: string) => Boolean(getSafeHttpUrl(value));
 
 const parsePhotoUrls = (value: string) => {
   if (!value.trim()) return [];
@@ -134,10 +136,10 @@ export const normalizePlacesCsv = (csvText: string): PlaceRecord[] => {
       address: read(row, 'Address / Landmark'),
       openingHours: read(row, 'Opening Hours'),
       phone: read(row, 'Phone'),
-      website: read(row, 'Facebook / Website'),
+      website: getSafeHttpUrl(read(row, 'Facebook / Website')),
       description: read(row, 'Short Description') || `${name} in Villaverde, Nueva Vizcaya.`,
       verificationSource: read(row, 'Verification Source'),
-      sourceUrl: read(row, 'Source URL'),
+      sourceUrl: getSafeHttpUrl(read(row, 'Source URL')),
       lastChecked: read(row, 'Last Checked') || read(row, 'Last Verified'),
       status,
       notes: read(row, 'Notes'),
@@ -150,7 +152,10 @@ export const normalizePlacesCsv = (csvText: string): PlaceRecord[] => {
   });
 
   const uniquePlaces = new Map<string, PlaceRecord>();
-  places.forEach((place) => uniquePlaces.set(place.id, place));
+  places.forEach((place) => {
+    if (uniquePlaces.has(place.id)) throw new Error(`Duplicate Place ID: ${place.id}`);
+    uniquePlaces.set(place.id, place);
+  });
   return Array.from(uniquePlaces.values());
 };
 

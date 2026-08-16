@@ -1,0 +1,120 @@
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {hasActiveFilters && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCategoryFilter('all');
+                              setBarangayFilter('all');
+                            }}
+                            className="col-span-2 inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full bg-[#FFFDF7] text-xs font-extrabold text-[#526158] transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20"
+                          >
+                            <X className="h-3.5 w-3.5" aria-hidden="true" />
+                            Clear filters
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </section>
+                )}
+
+                {isRestoring && (
+                  <div
+                    className="flex items-start gap-3 rounded-[20px] border border-[#BFD2EA] bg-[#F2F7FF] p-4"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <RefreshCw
+                      className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-[#2563EB]"
+                      aria-hidden="true"
+                    />
+                    <div>
+                      <p className="text-sm font-extrabold text-[#1E3A5F]">
+                        Restoring saved places
+                      </p>
+                      <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
+                        {unresolvedCount} saved {unresolvedCount === 1 ? 'place is' : 'places are'} still
+                        being matched with the live database.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {hasUnresolvedItems && (
+                  <div
+                    className="flex items-start gap-3 rounded-[20px] border border-[#E8D6AF] bg-[#FFF8E8] p-4"
+                    role="status"
+                  >
+                    <AlertTriangle
+                      className="mt-0.5 h-4 w-4 shrink-0 text-[#8A581F]"
+                      aria-hidden="true"
+                    />
+                    <div>
+                      <p className="text-sm font-extrabold text-[#6F451C]">
+                        Some saved places are temporarily unavailable
+                      </p>
+                      <p className="mt-1 text-xs font-medium leading-5 text-[#7A644C]">
+                        {unresolvedCount} saved {unresolvedCount === 1 ? 'place remains' : 'places remain'}
+                        stored on this device and will return when matching place data is available.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {collectionPlaces.length === 0 && unresolvedCount === 0 ? (
+                  <EmptyState
+                    icon={emptyCopy.icon}
+                    title={emptyCopy.title}
+                    message={emptyCopy.message}
+                  />
+                ) : filteredPlaces.length === 0 ? (
+                  <div className="space-y-3">
+                    <EmptyState
+                      icon={Search}
+                      title="No matching saved places"
+                      message="Try another name, category, or barangay, or clear the current filters."
+                    />
+                    <button
+                      type="button"
+                      onClick={resetOrganization}
+                      className="mx-auto flex min-h-10 items-center justify-center gap-2 rounded-full bg-[#26372F] px-5 text-xs font-extrabold text-white transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#26372F]/25"
+                    >
+                      <X className="h-4 w-4" aria-hidden="true" />
+                      Clear search and filters
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-3 px-1">
+                      <p className="text-xs font-bold text-[#748078]">
+                        {filteredPlaces.length} of {collectionPlaces.length} place
+                        {collectionPlaces.length === 1 ? '' : 's'}
+                      </p>
+                      {(normalizedSearchQuery || hasActiveFilters || groupMode !== 'none') && (
+                        <button
+                          type="button"
+                          onClick={resetOrganization}
+                          className="inline-flex min-h-8 items-center gap-1.5 rounded-full px-2.5 text-[10px] font-extrabold text-[#2B6A4E] transition active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20"
+                        >
+                          <X className="h-3.5 w-3.5" aria-hidden="true" />
+                          Reset
+                        </button>
+                      )}
+                    </div>
+
+                    {groupedPlaces.map((group) => (
+                      <section key={group.key} className="space-y-2.5">
+                        {groupMode !== 'none' && (
+                          <div className="flex items-center gap-2 px-1">
+                            <h3 className="text-xs font-extrabold text-[#405047]">
+                              {group.label}
+                            </h3>
+                            <span className="rounded-full bg-[#E7F0E8] px-2 py-0.5 text-[10px] font-extrabold text-[#2B6A4E]">
+                              {group.places.length}
+                            </span>
+                          </div>
+                        )}
+                        <div className="space-y-2.5">

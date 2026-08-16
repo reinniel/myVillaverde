@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowRightLeft, Bookmark, ChevronRight, LocateFixed, Map as MapIcon, MapPin, Navigation } from 'lucide-react';
-import type { Barangay, GuideCategory, ModalId, RecentlyViewedPlace } from '../types/app';
+import type { Barangay, DashboardModalId, GuideCategory, RecentlyViewedPlace } from '../types/app';
 import { LOCAL_CATEGORIES } from '../data/categories';
 import { CategoryList } from '../components/CategoryList';
 import { BarangayArtwork } from '../components/BarangayArtwork';
@@ -11,7 +11,7 @@ export interface LocalDashboardProps {
   recentlyViewedPlaces: RecentlyViewedPlace[];
   onOpenBarangay: () => void;
   onOpenMap: () => void;
-  onOpenModal: (modal: Exclude<ModalId, null>) => void;
+  onOpenModal: (modal: DashboardModalId) => void;
   onOpenCategory: (category: GuideCategory) => void;
   onOpenPlace: (placeId: string) => void;
 }

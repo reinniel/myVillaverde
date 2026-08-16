@@ -1,0 +1,120 @@
+  userLocation,
+  onOpenPlace,
+  onToggleFavorite,
+  onRemoveRecentlyViewed,
+  onClearRecentlyViewed,
+}) => {
+  const initialViewPreferences = useMemo(readSavedViewPreferences, []);
+  const [activeCollection, setActiveCollection] = useState<SavedCollectionId>(
+    initialViewPreferences.activeCollection,
+  );
+  const [wantToVisitSnapshots, setWantToVisitSnapshots] = useState<PlaceRecord[]>(readWantToVisitPlaces);
+  const [legacyWantToVisitIds, setLegacyWantToVisitIds] = useState<string[]>(readLegacyWantToVisitIds);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [barangayFilter, setBarangayFilter] = useState<string>('all');
+  const [groupMode, setGroupMode] = useState<SavedGroupMode>(initialViewPreferences.groupMode);
+  const [showFilters, setShowFilters] = useState(false);
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(WANT_TO_VISIT_STORAGE_KEY, JSON.stringify(wantToVisitSnapshots));
+    } catch (error) {
+      console.error('Failed to save Want to Visit places', error);
+    }
+  }, [wantToVisitSnapshots]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        SAVED_VIEW_STORAGE_KEY,
+        JSON.stringify({ activeCollection, groupMode }),
+      );
+    } catch (error) {
+      console.error('Failed to save saved-view preferences', error);
+    }
+  }, [activeCollection, groupMode]);
+
+  useEffect(() => {
+    if (legacyWantToVisitIds.length === 0) return;
+
+    const resolvedPlaces = legacyWantToVisitIds
+      .map((id) => places.find((place) => place.id === id))
+      .filter((place): place is PlaceRecord => Boolean(place));
+
+    if (resolvedPlaces.length === 0) return;
+
+    const resolvedIds = new Set(resolvedPlaces.map((place) => place.id));
+    setWantToVisitSnapshots((current) => dedupePlaces([...resolvedPlaces, ...current]));
+    setLegacyWantToVisitIds((current) => {
+      const next = current.filter((id) => !resolvedIds.has(id));
+
+      try {
+        if (next.length > 0) {
+          localStorage.setItem(LEGACY_WANT_TO_VISIT_STORAGE_KEY, JSON.stringify(next));
+        } else {
+          localStorage.removeItem(LEGACY_WANT_TO_VISIT_STORAGE_KEY);
+        }
+      } catch (error) {
+        console.error('Failed to finish Want to Visit migration', error);
+      }
+
+      return next;
+    });
+  }, [legacyWantToVisitIds, places]);
+
+  const favoriteIds = useMemo(() => new Set(savedPlaces.map((place) => place.id)), [savedPlaces]);
+  const favoritePlaces = useMemo(
+    () => savedPlaces.map(
+      (snapshot) => places.find((place) => place.id === snapshot.id) ?? snapshot,
+    ),
+    [places, savedPlaces],
+  );
+  const wantToVisitSnapshotIds = useMemo(
+    () => new Set(wantToVisitSnapshots.map((place) => place.id)),
+    [wantToVisitSnapshots],
+  );
+  const unresolvedLegacyIds = useMemo(
+    () => legacyWantToVisitIds.filter((id) => !wantToVisitSnapshotIds.has(id)),
+    [legacyWantToVisitIds, wantToVisitSnapshotIds],
+  );
+
+  const wantToVisitPlaces = useMemo(
+    () => wantToVisitSnapshots.map(
+      (snapshot) => places.find((place) => place.id === snapshot.id) ?? snapshot,
+    ),
+    [places, wantToVisitSnapshots],
+  );
+
+  const recentPlaces = useMemo(
+    () => recentlyViewedPlaces
+      .map((recent) => places.find((place) => place.id === recent.id))
+      .filter((place): place is PlaceRecord => Boolean(place)),
+    [places, recentlyViewedPlaces],
+  );
+
+  const unresolvedRecentCount = Math.max(0, recentlyViewedPlaces.length - recentPlaces.length);
+
+  const collections = [
+    { id: 'favorites' as const, label: 'Favorites', icon: Heart, count: favoritePlaces.length },
+    {
+      id: 'want-to-visit' as const,
+      label: 'Want to Visit',
+      icon: Bookmark,
+      count: wantToVisitPlaces.length + unresolvedLegacyIds.length,
+    },
+    {
+      id: 'recent' as const,
+      label: 'Recently Viewed',
+      icon: Clock3,
+      count: recentlyViewedPlaces.length,
+    },
+  ];
+
+  const collectionPlaces = activeCollection === 'favorites'
+    ? favoritePlaces
+    : activeCollection === 'want-to-visit'
+      ? wantToVisitPlaces
+      : recentPlaces;
+

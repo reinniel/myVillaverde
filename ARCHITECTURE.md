@@ -25,7 +25,7 @@ The published Google Sheet is authoritative. Run `npm run data:sync` after canon
 ## Navigation and persistence
 
 - The app intentionally uses browser history without React Router.
-- Place-page, visitor-barangay, and focused-map URLs use query parameters coordinated by `placeNavigation.ts` and `App.tsx`, so Back/Forward restores the correct surface without React Router.
+- Place-page, visitor-barangay, and focused-map URLs use query parameters coordinated by `placeNavigation.ts` and `App.tsx`. Temporary sheets and galleries use `history.state`, keeping the URL clean while Back/Forward restores their exact context without React Router.
 - Selected barangay, map view, favorites, Want to Visit, recently viewed data, and ordered trip place IDs are stored locally under versioned keys.
 - Saved-place migrations preserve older ID-only entries until their live records can be restored.
 - Trip plans never copy place records: each stop resolves by ID against the current live or fallback dataset, so the Places sheet remains authoritative.
@@ -37,6 +37,7 @@ The published Google Sheet is authoritative. Run `npm run data:sync` after canon
 - Latitude and longitude must be valid numbers.
 - Duplicate and permanently closed source rows are excluded.
 - Photos require both an approved permission value and a supported HTTP(S) URL.
+- External website and source links must use an absolute HTTP(S) URL.
 - Missing ratings, popularity, operating details, or barangay claims must remain unknown rather than being fabricated.
 
 ## Release workflow
@@ -46,12 +47,12 @@ The published Google Sheet is authoritative. Run `npm run data:sync` after canon
 3. Run typecheck, production build, and preview checks before committing from AI Studio to GitHub.
 4. Confirm the GitHub checkpoint matches the verified AI Studio state.
 5. Complete visual and interaction verification of empty, offline, loading, mobile, accessibility, persistence, and recovery states.
-6. Run `npm run verify` for every release gate; it checks source data, TypeScript, and a forced production build.
+6. Run `npm run verify` for every release gate; it checks source data, TypeScript, targeted utility tests, and a forced production build.
 
 ## Deferred decisions
 
 - React Router remains deferred while the current history behavior is stable.
 - Server-side rendering remains deferred because the product is a client-side local guide.
-- Automated component and end-to-end tests should be added as the Phase 6 interaction surface grows.
+- Component and end-to-end coverage should be added as the Phase 6 interaction surface grows; targeted Node tests currently protect navigation history, URL validation, duplicate-ID rejection, and live-data fallback behavior.
 - Broader design-system extraction should follow demonstrated reuse rather than happen preemptively.
 - The production build wrapper sets `NODE_ENV=production` inside Node so host-level development environment variables cannot silently produce an oversized release bundle.

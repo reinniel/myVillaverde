@@ -3,6 +3,7 @@ import { PLACES_CSV_URL } from '../data/config';
 import { FALLBACK_PLACES } from '../data/places';
 import type { PlaceRecord, PlacesDataState } from '../types/app';
 import { normalizePlacesCsv } from '../utils/places';
+import { resolvePlacesFetchFailure } from '../utils/placesDataState';
 
 export const usePlacesData = () => {
   const [places, setPlaces] = useState<PlaceRecord[]>(FALLBACK_PLACES);
@@ -14,14 +15,8 @@ export const usePlacesData = () => {
   const activeControllerRef = useRef<AbortController | null>(null);
 
   const getOfflinePlaces = useCallback(() => {
-    const availablePlaces = lastSuccessfulPlacesRef.current;
-    const isLiveCache = availablePlaces !== FALLBACK_PLACES;
-    return {
-      availablePlaces,
-      message: isLiveCache
-        ? `${availablePlaces.length} places remain available from the last successful live database load.`
-        : `${FALLBACK_PLACES.length} places are available from the built-in snapshot while you are offline.`,
-    };
+    const result = resolvePlacesFetchFailure(lastSuccessfulPlacesRef.current, FALLBACK_PLACES, true);
+    return { availablePlaces: result.places, message: result.message };
   }, []);
 
   const refresh = useCallback(() => {
@@ -76,20 +71,14 @@ export const usePlacesData = () => {
         setLoadMessage(`${livePlaces.length} places loaded from the live database.`);
       } catch (error) {
         if (cancelled || controller.signal.aborted) return;
-        console.warn('Using built-in place snapshot because the live Sheet feed could not load.', error);
+        console.warn('The live Sheet feed could not load. Keeping the best available place data.', error);
 
         const offline = typeof navigator !== 'undefined' && !navigator.onLine;
         setIsOnline(!offline);
-        if (offline) {
-          const offlineData = getOfflinePlaces();
-          setPlaces(offlineData.availablePlaces);
-          setDataState('offline');
-          setLoadMessage(offlineData.message);
-        } else {
-          setPlaces(FALLBACK_PLACES);
-          setDataState('snapshot');
-          setLoadMessage(`${FALLBACK_PLACES.length} places loaded from the built-in snapshot because the live database could not be reached.`);
-        }
+        const failureResult = resolvePlacesFetchFailure(lastSuccessfulPlacesRef.current, FALLBACK_PLACES, offline);
+        setPlaces(failureResult.places);
+        setDataState(failureResult.dataState);
+        setLoadMessage(failureResult.message);
       }
     };
 

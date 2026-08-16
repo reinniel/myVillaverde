@@ -1,0 +1,120 @@
+        </button>
+      </div>
+    </article>
+  );
+
+  return (
+    <div className="space-y-4">
+      <div
+        className="grid grid-cols-3 gap-2"
+        role="tablist"
+        aria-label="Saved place collections"
+        aria-orientation="horizontal"
+      >
+        {collections.map((collection, index) => {
+          const Icon = collection.icon;
+          const isActive = activeCollection === collection.id;
+          const tabId = `saved-tab-${collection.id}`;
+          const panelId = `saved-panel-${collection.id}`;
+
+          return (
+            <button
+              key={collection.id}
+              ref={(element) => {
+                tabRefs.current[index] = element;
+              }}
+              id={tabId}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              aria-controls={panelId}
+              tabIndex={isActive ? 0 : -1}
+              onClick={() => {
+                setActiveCollection(collection.id);
+                setSearchQuery('');
+                setCategoryFilter('all');
+                setBarangayFilter('all');
+              }}
+              onKeyDown={(event) => handleCollectionKeyDown(event, index)}
+              className={`min-w-0 rounded-[20px] border px-2 py-3 text-center transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20 ${
+                isActive
+                  ? 'border-[#2B6A4E] bg-[#E7F0E8] text-[#2B6A4E] shadow-sm'
+                  : 'border-[#D9E0D8] bg-[#FFFDF7] text-[#5C685F]'
+              }`}
+            >
+              <Icon
+                className={`mx-auto h-5 w-5 ${
+                  isActive && collection.id === 'favorites' ? 'fill-current' : ''
+                }`}
+                aria-hidden="true"
+              />
+              <span className="mt-1.5 block truncate text-[10px] font-extrabold leading-4">
+                {collection.label}
+              </span>
+              <span className="mt-0.5 block text-[10px] font-bold opacity-70">
+                {collection.count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="sr-only" aria-live="polite">
+        {filteredPlaces.length} matching {activeCollectionLabel.toLowerCase()} place
+        {filteredPlaces.length === 1 ? '' : 's'}
+      </p>
+
+      {collections.map((collection) => {
+        const isActive = activeCollection === collection.id;
+
+        return (
+          <div
+            key={collection.id}
+            id={`saved-panel-${collection.id}`}
+            role="tabpanel"
+            aria-labelledby={`saved-tab-${collection.id}`}
+            tabIndex={isActive ? 0 : -1}
+            hidden={!isActive}
+            className="space-y-3 focus:outline-none"
+          >
+            {isActive && (
+              <>
+                {(dataState === 'offline' || dataState === 'snapshot' || dataState === 'cached') && (
+                  <div
+                    className="flex items-start gap-3 rounded-[20px] border border-[#E8D6AF] bg-[#FFF8E8] p-4"
+                    role="status"
+                  >
+                    <WifiOff
+                      className="mt-0.5 h-4 w-4 shrink-0 text-[#8A581F]"
+                      aria-hidden="true"
+                    />
+                    <div>
+                      <p className="text-sm font-extrabold text-[#6F451C]">
+                        {dataState === 'offline' ? 'You are offline' : dataState === 'cached' ? 'Using the last live place data' : 'Live place data is unavailable'}
+                      </p>
+                      <p className="mt-1 text-xs font-medium leading-5 text-[#7A644C]">
+                        Your saved collections remain available from this device. Some current place
+                        details may return when the live database reconnects.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {activeCollection === 'recent' && recentlyViewedPlaces.length > 0 && (
+                  <div className="flex items-center justify-between gap-3 rounded-[18px] border border-[#D9E0D8] bg-[#FFFDF7] px-3.5 py-2.5">
+                    <p className="text-xs font-bold text-[#748078]">
+                      Up to 20 recently opened places are kept on this device.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={onClearRecentlyViewed}
+                      className="shrink-0 rounded-full px-3 py-2 text-[10px] font-extrabold text-[#9B4338] transition active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#9B4338]/20"
+                    >
+                      Clear history
+                    </button>
+                  </div>
+                )}
+
+                {hasOrganizationControls && (
+                  <section className="space-y-2.5" aria-label="Search and organize saved places">
+                    <div className="relative">

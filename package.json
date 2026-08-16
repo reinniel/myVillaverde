@@ -1,14 +1,15 @@
 {
   "name": "myvillaverde-local-guide",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "node scripts/build-production.mjs",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
-    "check": "npm run lint && npm run build",
+    "test": "node --experimental-strip-types --test src/utils/navigationHistory.test.ts src/utils/places.test.ts src/utils/placesDataState.test.ts",
+    "check": "npm run lint && npm test && npm run build",
     "data:sync": "node scripts/sync-places-fallback.mjs",
     "data:check": "node scripts/sync-places-fallback.mjs --check",
     "verify": "npm run data:check && npm run check"

@@ -1,0 +1,14 @@
+                          {group.places.map(renderPlaceCard)}
+                        </div>
+                      </section>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
