@@ -78,6 +78,12 @@ export const TripPlannerSheet: React.FC<TripPlannerSheetProps> = ({
           <p className="text-xs font-semibold leading-5">Using the built-in place snapshot because the live database could not be reached.</p>
         </div>
       )}
+      {dataState === 'cached' && (
+        <div className="flex items-start gap-3 rounded-[20px] border border-[#E8D6AF] bg-[#FFF8E8] p-4 text-[#6F451C]" role="status">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <p className="text-xs font-semibold leading-5">The latest refresh failed, so your trip is using the last successful live place data.</p>
+        </div>
+      )}
 
       <section aria-labelledby="trip-stops-heading">
         <div className="flex items-end justify-between gap-3">

@@ -3,11 +3,11 @@ import {
   AlertTriangle, Check, ChevronRight, MapPin, Navigation, RefreshCw, Search, X,
 } from 'lucide-react';
 import type {
-  AppMode, CategoryScope, GuideCategory, MapPanelView, ModalId, PlaceRecord,
+  AppMode, CategoryScope, GuideCategory, MapCategoryId, MapPanelView, MapReturnState, ModalId, PlaceRecord,
   RecentlyViewedPlace, SelectedCategory, TransitionDirection, UserLocation,
 } from './types/app';
 import { MODE_ORDER, VILLAVERDE_BARANGAYS } from './data/barangays';
-import { CATEGORY_MARKER_COLORS } from './data/categories';
+import { CATEGORY_MARKER_COLORS, LOCAL_CATEGORIES, VISITOR_CATEGORIES } from './data/categories';
 import {
   RECENTLY_VIEWED_STORAGE_KEY, SAVED_PLACES_STORAGE_KEY, SELECTED_BARANGAY_STORAGE_KEY,
   TRIP_PLAN_STORAGE_KEY,
@@ -33,6 +33,13 @@ import {
 import {
   formatDistance, getDistanceMeters, MAX_TRIP_STOPS, placeMatchesGuideCategory,
 } from './utils/places';
+import {
+  buildMapPreviewHistoryState, buildMapReturnHistoryState,
+  buildMapWithoutPreviewHistoryState, buildTransientModalHistoryState,
+  isMapPreviewHistoryState,
+  readCategoryModalStateFromHistory, readMapReturnStateFromHistory,
+  readTransientModalFromHistory,
+} from './utils/navigationHistory';
 import './styles/app.css';
 
 const getValidBarangayId = (barangayId: string | null | undefined) =>
@@ -40,9 +47,15 @@ const getValidBarangayId = (barangayId: string | null | undefined) =>
     ? barangayId
     : null;
 
-const readMapPlaceIdFromHistory = () => {
-  const placeId: unknown = window.history.state?.myVillaverdeMapPlaceId;
-  return typeof placeId === 'string' ? placeId : null;
+const resolveGuideCategory = (scope: CategoryScope, categoryId: string) => {
+  const categories = scope === 'local' ? LOCAL_CATEGORIES : VISITOR_CATEGORIES;
+  const category = categories.find((candidate) => candidate.id === categoryId);
+  return category ? { scope, category } : null;
+};
+
+const readSelectedCategoryFromHistory = () => {
+  const categoryState = readCategoryModalStateFromHistory(window.history.state);
+  return categoryState ? resolveGuideCategory(categoryState.scope, categoryState.categoryId) : null;
 };
 
 const readTripPlaceIds = () => {
@@ -60,6 +73,9 @@ const readTripPlaceIds = () => {
 };
 
 export default function App() {
+  const initialMapReturnState = readMapReturnStateFromHistory(window.history.state);
+  const initialHistoryModal = readTransientModalFromHistory(window.history.state);
+  const initialHistoryCategory = readSelectedCategoryFromHistory();
   const [mode, setMode] = useState<AppMode>(() => {
     const initialMapNavigation = readMapNavigationFromUrl();
     if (initialMapNavigation?.scope === 'local') return 'ko';
@@ -70,22 +86,27 @@ export default function App() {
   const [activeModal, setActiveModal] = useState<ModalId>(() =>
     !readPlacePageIdFromUrl() && !readMapNavigationFromUrl() && getValidBarangayId(readVisitorBarangayIdFromUrl())
       ? 'visitor-barangay'
-      : null,
+      : !readPlacePageIdFromUrl() && !readMapNavigationFromUrl() && initialHistoryModal !== 'category'
+        ? initialHistoryModal
+        : !readPlacePageIdFromUrl() && !readMapNavigationFromUrl() && initialHistoryCategory
+          ? 'category'
+          : null,
   );
   const [mapScope, setMapScope] = useState<CategoryScope | null>(() => readMapNavigationFromUrl()?.scope ?? null);
   const [placePageId, setPlacePageId] = useState<string | null>(() => readPlacePageIdFromUrl());
-  const [mapInitialPanelView, setMapInitialPanelView] = useState<MapPanelView>('categories');
+  const [mapInitialPanelView, setMapInitialPanelView] = useState<MapPanelView>(initialMapReturnState.panelView);
+  const [mapInitialCategoryId, setMapInitialCategoryId] = useState<MapCategoryId>(initialMapReturnState.categoryId);
   const [mapInitialBarangayId, setMapInitialBarangayId] = useState<string | null>(() =>
     getValidBarangayId(readMapNavigationFromUrl()?.barangayId),
   );
   const [mapInitialPlaceId, setMapInitialPlaceId] = useState<string | null>(() =>
-    readMapNavigationFromUrl() ? readMapPlaceIdFromHistory() : null,
+    readMapNavigationFromUrl() ? initialMapReturnState.selectedPlaceId : null,
   );
   const [selectedVisitorBarangayId, setSelectedVisitorBarangayId] = useState<string | null>(() =>
     getValidBarangayId(readVisitorBarangayIdFromUrl() ?? readMapNavigationFromUrl()?.barangayId),
   );
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<SelectedCategory | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<SelectedCategory | null>(initialHistoryCategory);
   const [categorySearchQuery, setCategorySearchQuery] = useState('');
   const {
     places,
@@ -148,15 +169,32 @@ export default function App() {
       const nextVisitorBarangayId = readVisitorBarangayIdFromUrl();
       const validVisitorBarangayId = getValidBarangayId(nextVisitorBarangayId);
       const validMapBarangayId = getValidBarangayId(nextMapNavigation?.barangayId);
-      const nextMapPlaceId = nextMapNavigation ? readMapPlaceIdFromHistory() : null;
+      const nextMapReturnState = readMapReturnStateFromHistory(window.history.state);
+      const nextHistoryModal = readTransientModalFromHistory(window.history.state);
+      const nextCategoryState = readCategoryModalStateFromHistory(window.history.state);
+      const nextSelectedCategory = nextCategoryState
+        ? resolveGuideCategory(nextCategoryState.scope, nextCategoryState.categoryId)
+        : null;
 
       setPlacePageId(nextPlacePageId);
       setMapScope(nextMapNavigation?.scope ?? null);
-      setMapInitialPanelView('categories');
+      setMapInitialPanelView(nextMapReturnState.panelView);
+      setMapInitialCategoryId(nextMapReturnState.categoryId);
       setMapInitialBarangayId(validMapBarangayId);
-      setMapInitialPlaceId(nextMapPlaceId);
+      setMapInitialPlaceId(nextMapNavigation ? nextMapReturnState.selectedPlaceId : null);
       setSelectedVisitorBarangayId(validVisitorBarangayId ?? validMapBarangayId);
-      setActiveModal(!nextPlacePageId && !nextMapNavigation && validVisitorBarangayId ? 'visitor-barangay' : null);
+      if (!nextPlacePageId && !nextMapNavigation && validVisitorBarangayId) {
+        setActiveModal('visitor-barangay');
+      } else if (!nextPlacePageId && !nextMapNavigation && nextHistoryModal) {
+        if (nextHistoryModal === 'category') {
+          setSelectedCategory(nextSelectedCategory);
+          setActiveModal(nextSelectedCategory ? 'category' : null);
+        } else {
+          setActiveModal(nextHistoryModal);
+        }
+      } else {
+        setActiveModal(null);
+      }
       if (nextMapNavigation?.scope === 'local') setMode('ko');
       if (nextMapNavigation?.scope === 'visitor' || validVisitorBarangayId) setMode('mo');
     };
@@ -247,14 +285,47 @@ export default function App() {
     navigateToPlacePage(place.id);
   };
 
-  const openMapPlacePage = (place: PlaceRecord) => {
+  const openMapPlacePage = (place: PlaceRecord, returnState: MapReturnState) => {
     window.history.replaceState(
-      { ...window.history.state, myVillaverdeMapPlaceId: place.id },
+      buildMapReturnHistoryState(window.history.state, returnState),
       '',
       window.location.href,
     );
-    setMapInitialPlaceId(place.id);
+    setMapInitialPanelView(returnState.panelView);
+    setMapInitialCategoryId(returnState.categoryId);
+    setMapInitialPlaceId(returnState.selectedPlaceId);
     openPlacePage(place);
+  };
+
+  const updateMapReturnState = (returnState: MapReturnState) => {
+    window.history.replaceState(
+      buildMapReturnHistoryState(window.history.state, returnState),
+      '',
+      window.location.href,
+    );
+  };
+
+  const openMapPlacePreview = (returnState: MapReturnState) => {
+    const nextState = buildMapPreviewHistoryState(window.history.state, returnState);
+    if (isMapPreviewHistoryState(window.history.state)) {
+      window.history.replaceState(nextState, '', window.location.href);
+    } else {
+      window.history.pushState(nextState, '', window.location.href);
+    }
+    setMapInitialPlaceId(returnState.selectedPlaceId);
+  };
+
+  const closeMapPlacePreview = (returnState: MapReturnState) => {
+    setMapInitialPlaceId(null);
+    if (isMapPreviewHistoryState(window.history.state)) {
+      window.history.back();
+      return;
+    }
+    window.history.replaceState(
+      buildMapWithoutPreviewHistoryState(window.history.state, returnState),
+      '',
+      window.location.href,
+    );
   };
 
   const openRecentlyViewedPlace = (placeId: string) => {
@@ -302,6 +373,7 @@ export default function App() {
       console.error('Failed to save selectedBarangay to localStorage', error);
     }
     setActiveModal(null);
+    if (readTransientModalFromHistory(window.history.state) === 'barangay') window.history.back();
   };
 
   const handleToggleSavedPlace = (place: PlaceRecord) => {
@@ -370,7 +442,27 @@ export default function App() {
     }
   };
 
+  const openTransientModal = (modal: Exclude<ModalId, 'visitor-barangay' | 'category' | null>) => {
+    window.history.pushState(
+      buildTransientModalHistoryState(window.history.state, modal),
+      '',
+      window.location.href,
+    );
+    setActiveModal(modal);
+  };
+
+  const closeTransientModal = () => {
+    const historyModal = readTransientModalFromHistory(window.history.state);
+    setActiveModal(null);
+    if (historyModal && historyModal === activeModal) window.history.back();
+  };
+
   const openCategory = (scope: CategoryScope, category: GuideCategory) => {
+    window.history.pushState(
+      buildTransientModalHistoryState(window.history.state, 'category', { scope, categoryId: category.id }),
+      '',
+      window.location.href,
+    );
     setSelectedCategory({ scope, category });
     setActiveModal('category');
   };
@@ -402,19 +494,24 @@ export default function App() {
     initialBarangayId: string | null = null,
   ) => {
     const validInitialBarangayId = scope === 'visitor' ? getValidBarangayId(initialBarangayId) : null;
+    const returnState: MapReturnState = {
+      panelView: initialPanelView,
+      categoryId: 'all',
+      selectedPlaceId: null,
+    };
     window.history.pushState(
-      {
+      buildMapReturnHistoryState({
         ...window.history.state,
         myVillaverdeMapEntry: true,
-        myVillaverdeMapPlaceId: null,
         mapScope: scope,
         barangayId: validInitialBarangayId,
-      },
+      }, returnState),
       '',
       buildMapUrl(scope, validInitialBarangayId),
     );
     setActiveModal(null);
     setMapInitialPanelView(initialPanelView);
+    setMapInitialCategoryId('all');
     setMapInitialBarangayId(validInitialBarangayId);
     setMapInitialPlaceId(null);
     setMapScope(scope);
@@ -433,6 +530,8 @@ export default function App() {
       removeMapFromUrl(),
     );
     setMapScope(null);
+    setMapInitialPanelView('categories');
+    setMapInitialCategoryId('all');
     setMapInitialBarangayId(null);
     setMapInitialPlaceId(null);
     if (returnBarangayId) {
@@ -466,6 +565,7 @@ export default function App() {
             activeBarangay={activeBarangay}
             scope={mapScope}
             initialPanelView={mapInitialPanelView}
+            initialCategoryId={mapInitialCategoryId}
             initialBarangayId={mapInitialBarangayId}
             initialSelectedPlaceId={mapInitialPlaceId}
             places={places}
@@ -478,6 +578,9 @@ export default function App() {
             onUserLocationChange={setUserLocation}
             onToggleSavedPlace={handleToggleSavedPlace}
             onOpenPlacePage={openMapPlacePage}
+            onNavigationStateChange={updateMapReturnState}
+            onPlacePreviewOpen={openMapPlacePreview}
+            onPlacePreviewClose={closeMapPlacePreview}
             onBack={closeMap}
           />
         ) : (
@@ -491,9 +594,9 @@ export default function App() {
                 <LocalDashboard
                   activeBarangay={activeBarangay}
                   recentlyViewedPlaces={recentlyViewedPlaces.slice(0, 3)}
-                  onOpenBarangay={() => setActiveModal('barangay')}
+                  onOpenBarangay={() => openTransientModal('barangay')}
                   onOpenMap={() => openMap('local')}
-                  onOpenModal={(modal) => modal === 'nearby' ? openMap('local', 'nearby') : setActiveModal(modal)}
+                  onOpenModal={(modal) => modal === 'nearby' ? openMap('local', 'nearby') : openTransientModal(modal)}
                   onOpenCategory={(category) => openCategory('local', category)}
                   onOpenPlace={openRecentlyViewedPlace}
                 />
@@ -505,7 +608,7 @@ export default function App() {
                   dataState={placesDataState}
                   isOnline={isOnline}
                   onOpenMap={() => openMap('visitor')}
-                  onOpenModal={(modal) => modal === 'nearby' ? openMap('visitor', 'nearby') : setActiveModal(modal)}
+                  onOpenModal={(modal) => modal === 'nearby' ? openMap('visitor', 'nearby') : openTransientModal(modal)}
                   onOpenCategory={(category) => openCategory('visitor', category)}
                   onOpenPlace={openPlacePage}
                   onOpenBarangay={openVisitorBarangay}
@@ -517,7 +620,7 @@ export default function App() {
       </div>
 
       {activeModal === 'barangay' && (
-        <BottomSheet title="Choose your barangay" subtitle="Every barangay has its own guide card and visual theme." onClose={() => setActiveModal(null)}>
+        <BottomSheet title="Choose your barangay" subtitle="Every barangay has its own guide card and visual theme." onClose={closeTransientModal}>
           <div className="grid grid-cols-2 gap-3">
             {VILLAVERDE_BARANGAYS.map((barangay) => {
               const isSelected = barangay.name === selectedBarangay;
@@ -574,7 +677,7 @@ export default function App() {
   <BottomSheet
     title="Saved Places"
     subtitle="Favorites, plans, and places you recently opened."
-    onClose={() => setActiveModal(null)}
+    onClose={closeTransientModal}
   >
     <SavedPlacesSheet
   savedPlaces={savedPlaces}
@@ -594,7 +697,7 @@ export default function App() {
         <BottomSheet
           title="Plan a trip"
           subtitle="Build an ordered route from real places in the shared guide."
-          onClose={() => setActiveModal(null)}
+          onClose={closeTransientModal}
         >
           <TripPlannerSheet
             placeIds={tripPlaceIds}
@@ -611,7 +714,7 @@ export default function App() {
       )}
 
       {activeModal === 'nearby' && (
-        <BottomSheet title="Nearby" subtitle={mode === 'mo' ? 'Find useful stops close to you.' : `Discover places near ${activeBarangay.name}.`} onClose={() => setActiveModal(null)}>
+        <BottomSheet title="Nearby" subtitle={mode === 'mo' ? 'Find useful stops close to you.' : `Discover places near ${activeBarangay.name}.`} onClose={closeTransientModal}>
           <div className="rounded-[28px] border border-[#D9E0D8] bg-[#FFFDF7] p-7 text-center shadow-xs">
             <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-[#E7F0E8] text-[#2B6A4E]"><Navigation className="h-6 w-6" /></span>
             <h3 className="mt-4 font-serif-header text-xl font-bold text-[#18241F]">Nearby is ready on the map</h3>
@@ -627,7 +730,7 @@ export default function App() {
           subtitle={selectedCategory.scope === 'local' ? `${activeBarangay.name} • VillaverdeKo` : 'VillaverdeMo visitor guide'}
           onClose={() => {
             setCategorySearchQuery('');
-            setActiveModal(null);
+            closeTransientModal();
           }}
         >
           <div className="relative mb-3">
@@ -665,7 +768,7 @@ export default function App() {
           {placesDataState !== 'live' && placesDataState !== 'loading' && (
             <div className="mb-3 flex items-start gap-2.5 rounded-[18px] border border-[#D9E0D8] bg-[#F3F5EF] px-3.5 py-3 text-xs font-medium leading-5 text-[#627066]" role="status">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#8A6A2F]" aria-hidden="true" />
-              <span>{placesDataState === 'offline' ? 'You are offline. Showing the last available place data.' : 'The live database could not be reached. Showing the built-in place snapshot.'}</span>
+              <span>{placesDataState === 'offline' ? 'You are offline. Showing the last available place data.' : placesDataState === 'cached' ? 'The latest refresh failed. Showing the last successful live place data.' : 'The live database could not be reached. Showing the built-in place snapshot.'}</span>
             </div>
           )}
 

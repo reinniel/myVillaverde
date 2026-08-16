@@ -9,9 +9,12 @@ import { CATEGORY_MARKER_COLORS } from '../data/categories';
 import { PhotoGallery } from '../components/PhotoGallery';
 import {
   formatCheckedDate, formatDistance, formatWebsiteLabel, getApprovedPhotoUrls,
-  getDirectionsUrl, getDistanceMeters, getOpeningHoursSummary,
+  getDirectionsUrl, getDistanceMeters, getOpeningHoursSummary, getSafeHttpUrl,
 } from '../utils/places';
 import { buildPlacePageUrl } from '../utils/placeNavigation';
+import {
+  buildGalleryHistoryState, readGalleryIndexFromHistory,
+} from '../utils/navigationHistory';
 
 export interface PlacePageProps {
   place: PlaceRecord | null;
@@ -126,8 +129,31 @@ export const PlacePage: React.FC<PlacePageProps> = ({
   useEffect(() => {
     setCoverPhotoIndex(0);
     setCoverPhotoFailed(false);
-    setGalleryStartIndex(null);
+    setGalleryStartIndex(readGalleryIndexFromHistory(window.history.state, approvedPhotoUrls.length));
   }, [requestedPlaceId, photoSignature]);
+
+  useEffect(() => {
+    const syncGalleryFromHistory = () => {
+      setGalleryStartIndex(readGalleryIndexFromHistory(window.history.state, approvedPhotoUrls.length));
+    };
+    window.addEventListener('popstate', syncGalleryFromHistory);
+    return () => window.removeEventListener('popstate', syncGalleryFromHistory);
+  }, [approvedPhotoUrls.length]);
+
+  const openGallery = (photoIndex: number) => {
+    window.history.pushState(
+      buildGalleryHistoryState(window.history.state, photoIndex),
+      '',
+      window.location.href,
+    );
+    setGalleryStartIndex(photoIndex);
+  };
+
+  const closeGallery = () => {
+    const historyGalleryIndex = readGalleryIndexFromHistory(window.history.state, approvedPhotoUrls.length);
+    setGalleryStartIndex(null);
+    if (historyGalleryIndex !== null) window.history.back();
+  };
 
   const copyPlaceLink = async (url: string) => {
     try {
@@ -181,7 +207,7 @@ export const PlacePage: React.FC<PlacePageProps> = ({
   const accent = CATEGORY_MARKER_COLORS[place.categoryId];
   const distance = userLocation ? getDistanceMeters(userLocation, place) : null;
   const isVerified = place.status.toLowerCase() === 'verified';
-  const primaryExternalUrl = place.website;
+  const primaryExternalUrl = getSafeHttpUrl(place.website);
   const coverPhotoUrl = coverPhotoFailed ? '' : (approvedPhotoUrls[coverPhotoIndex] || '');
   const photoFallbackLabel = approvedPhotoUrls.length > 0 ? 'Photo unavailable' : 'No approved photo';
   const openingHours = getOpeningHoursSummary(place.openingHours);
@@ -220,7 +246,7 @@ export const PlacePage: React.FC<PlacePageProps> = ({
           {coverPhotoUrl ? (
             <button
               type="button"
-              onClick={() => setGalleryStartIndex(coverPhotoIndex)}
+              onClick={() => openGallery(coverPhotoIndex)}
               className="absolute inset-0 h-full w-full focus:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-white/70"
               aria-label={`Open ${place.name} photo gallery`}
             >
@@ -273,7 +299,7 @@ export const PlacePage: React.FC<PlacePageProps> = ({
         <div className="mt-4 flex flex-wrap items-center gap-2" aria-label="Listing status">
           <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-extrabold ${isVerified ? 'bg-[#DDEBDF] text-[#2B6A4E]' : 'bg-[#FFF0D8] text-[#8A5726]'}`}>{isVerified ? <ShieldCheck className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}{isVerified ? 'Verified location' : 'Needs local confirmation'}</span>
           <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-extrabold ${openingHoursTone}`}><Clock3 className="h-3.5 w-3.5" />{openingHours.label}</span>
-          <span className="rounded-full bg-[#FFFDF7] px-3 py-1.5 text-[11px] font-extrabold text-[#627066] shadow-xs">{dataState === 'live' ? 'Live database' : dataState === 'offline' ? 'Offline data' : dataState === 'snapshot' ? 'Snapshot data' : 'Loading database'}</span>
+          <span className="rounded-full bg-[#FFFDF7] px-3 py-1.5 text-[11px] font-extrabold text-[#627066] shadow-xs">{dataState === 'live' ? 'Live database' : dataState === 'cached' ? 'Last live data' : dataState === 'offline' ? 'Offline data' : dataState === 'snapshot' ? 'Snapshot data' : 'Loading database'}</span>
           {distance !== null && <span className="rounded-full bg-[#FFFDF7] px-3 py-1.5 text-[11px] font-extrabold text-[#627066] shadow-xs">{formatDistance(distance)} away</span>}
         </div>
         <p className="sr-only" role="status" aria-live="polite">{shareState === 'copied' ? 'Place link copied' : ''}</p>
@@ -313,7 +339,7 @@ export const PlacePage: React.FC<PlacePageProps> = ({
             </div>
             <div className="flex items-start gap-3 py-4"><MapPin className="mt-0.5 h-5 w-5 shrink-0" style={{ color: accent }} /><div><p className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#89928A]">Address</p><p className="mt-1 text-sm font-bold leading-5 text-[#35463E]">{place.address || `${place.barangay}, Villaverde, Nueva Vizcaya`}</p></div></div>
             {place.phone && <div className="flex items-start gap-3 py-4"><Phone className="mt-0.5 h-5 w-5 shrink-0" style={{ color: accent }} /><div><p className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#89928A]">Phone</p><p className="mt-1 text-sm font-bold leading-5 text-[#35463E]">{place.phone}</p></div></div>}
-            {place.website && <div className="flex items-start gap-3 py-4"><Globe2 className="mt-0.5 h-5 w-5 shrink-0" style={{ color: accent }} /><div className="min-w-0"><p className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#89928A]">Website</p><a href={place.website} target="_blank" rel="noreferrer" className="mt-1 inline-flex min-h-11 max-w-full items-center gap-1.5 text-sm font-bold leading-5 text-[#35463E] underline decoration-[#B8C4BA] underline-offset-4"><span className="truncate">{formatWebsiteLabel(place.website)}</span><ExternalLink className="h-3.5 w-3.5 shrink-0" /></a></div></div>}
+            {primaryExternalUrl && <div className="flex items-start gap-3 py-4"><Globe2 className="mt-0.5 h-5 w-5 shrink-0" style={{ color: accent }} /><div className="min-w-0"><p className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#89928A]">Website</p><a href={primaryExternalUrl} target="_blank" rel="noreferrer" className="mt-1 inline-flex min-h-11 max-w-full items-center gap-1.5 text-sm font-bold leading-5 text-[#35463E] underline decoration-[#B8C4BA] underline-offset-4"><span className="truncate">{formatWebsiteLabel(primaryExternalUrl)}</span><ExternalLink className="h-3.5 w-3.5 shrink-0" /></a></div></div>}
             <div className="flex items-start gap-3 py-4"><Database className="mt-0.5 h-5 w-5 shrink-0" style={{ color: accent }} /><div><p className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#89928A]">Verification source</p><p className="mt-1 text-sm font-bold leading-5 text-[#35463E]">{place.verificationSource || 'Source not documented'}</p></div></div>
             <div className="flex items-start gap-3 py-4"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" style={{ color: accent }} /><div><p className="text-xs font-extrabold uppercase tracking-[0.08em] text-[#89928A]">Listing status</p><p className="mt-1 text-sm font-bold leading-5 text-[#35463E]">{place.status || 'Needs Checking'}{place.lastChecked ? ` · Checked ${formatCheckedDate(place.lastChecked)}` : ' · Check date unavailable'}</p></div></div>
           </div>
@@ -347,7 +373,7 @@ export const PlacePage: React.FC<PlacePageProps> = ({
         initialIndex={galleryStartIndex}
         photoSource={place.photoSource}
         photoCredit={place.photoCredit}
-        onClose={() => setGalleryStartIndex(null)}
+        onClose={closeGallery}
       />
     )}
     </>

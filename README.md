@@ -5,7 +5,7 @@
 <p><strong>A mobile-first local guide for Villaverde, Nueva Vizcaya.</strong></p>
 
 <p>
-  <img alt="Version 1.0.0" src="https://img.shields.io/badge/version-1.0.0-2B6A4E">
+  <img alt="Version 1.0.1" src="https://img.shields.io/badge/version-1.0.1-2B6A4E">
   <img alt="Status stable" src="https://img.shields.io/badge/status-stable-2B6A4E">
   <img alt="Verify workflow" src="https://github.com/reinniel/myVillaverde/actions/workflows/verify.yml/badge.svg">
   <img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white">
@@ -33,7 +33,7 @@
 - **VillaverdeKo** gives residents barangay-aware discovery, nearby places, saved collections, and direct map access.
 - **VillaverdeMo** gives visitors curated discovery, barangay guides, place pages, saved collections, and a four-stop trip planner.
 - **Explore Map** combines search, category filters, persistent map state, focused barangay views, and location-aware nearby results.
-- **Live place data** comes from the published Villaverde Places database, with a generated 28-place fallback for offline use.
+- **Live place data** comes from the published Villaverde Places database, with a generated 27-place fallback when the live feed is unavailable.
 - **Resilient states** cover loading, offline use, reconnecting, unavailable records, reduced motion, browser zoom, and render recovery.
 
 ## Product principles
@@ -57,7 +57,7 @@
 
 ## Getting started
 
-Requirements: Node.js 20 or newer and npm.
+Requirements: Node.js 22 or newer and npm.
 
 ```bash
 npm ci
@@ -72,15 +72,16 @@ The development server runs at `http://localhost:3000`.
 npm run verify
 ```
 
-The release gate checks that the offline fallback matches the live Places database, runs TypeScript validation, and creates a forced production build. The same gate runs automatically on pushes and pull requests through GitHub Actions.
+The release gate checks that the bundled fallback matches the live Places database, runs TypeScript and targeted utility tests, and creates a forced production build. The same gate runs automatically on pushes and pull requests through GitHub Actions.
 
 Useful individual commands:
 
 | Command | Purpose |
 | --- | --- |
 | `npm run lint` | Run TypeScript validation without emitting files |
+| `npm test` | Run targeted navigation, URL-safety, and data-fallback tests |
 | `npm run build` | Create a production-optimized Vite build |
-| `npm run check` | Run TypeScript validation and the production build |
+| `npm run check` | Run TypeScript validation, targeted tests, and the production build |
 | `npm run data:check` | Compare the fallback with the live Places database |
 | `npm run data:sync` | Regenerate the fallback from the live Places database |
 
@@ -104,6 +105,6 @@ The published Villaverde Places database is authoritative. Runtime data is norma
 
 ## Release
 
-**Current version:** `1.0.0`
+**Current version:** `1.0.1`
 
 Phases 1 through 6 are complete. Google AI Studio remains the active working copy, while GitHub `main` is the verified versioned mirror.

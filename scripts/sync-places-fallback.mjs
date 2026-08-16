@@ -93,6 +93,15 @@ const isSupportedPhotoUrl = (value) => {
   }
 };
 
+const getSafeHttpUrl = (value) => {
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url.toString() : '';
+  } catch {
+    return '';
+  }
+};
+
 const parsePhotoUrls = (value) => {
   if (!value.trim()) return [];
 
@@ -169,10 +178,10 @@ const normalizePlaces = (csvText) => {
       address: read(row, 'Address / Landmark'),
       openingHours: read(row, 'Opening Hours'),
       phone: read(row, 'Phone'),
-      website: read(row, 'Facebook / Website'),
+      website: getSafeHttpUrl(read(row, 'Facebook / Website')),
       description: read(row, 'Short Description') || `${name} in Villaverde, Nueva Vizcaya.`,
       verificationSource: read(row, 'Verification Source'),
-      sourceUrl: read(row, 'Source URL'),
+      sourceUrl: getSafeHttpUrl(read(row, 'Source URL')),
       lastChecked: read(row, 'Last Checked') || read(row, 'Last Verified'),
       status,
       notes: read(row, 'Notes'),
