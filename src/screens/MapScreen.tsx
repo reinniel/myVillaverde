@@ -8,7 +8,7 @@ import {
   ShieldCheck, X,
 } from 'lucide-react';
 import type {
-  Barangay, CategoryScope, LocationStatus, MapCategoryId, MapPanelView, MapSheetLevel,
+  Barangay, CategoryScope, LocationStatus, MapCategoryId, MapPanelView, MapReturnState, MapSheetLevel,
   MapTileState, PlaceRecord, PlacesDataState, StoredMapView, UserLocation,
 } from '../types/app';
 import { CATEGORY_MARKER_COLORS, MAP_CATEGORIES } from '../data/categories';
@@ -19,12 +19,13 @@ import { EmptyState } from '../components/EmptyState';
 import {
   LOCAL_DEFAULT_ZOOM, VISITOR_DEFAULT_ZOOM, VILLAVERDE_CENTER, readStoredMapView,
 } from '../utils/mapView';
-import { formatDistance, getDistanceMeters, getOpeningHoursSummary } from '../utils/places';
+import { formatDistance, getDistanceMeters, getOpeningHoursSummary, getSafeHttpUrl } from '../utils/places';
 
 export interface MapScreenProps {
   activeBarangay: Barangay;
   scope: CategoryScope;
   initialPanelView: MapPanelView;
+  initialCategoryId?: MapCategoryId;
   initialBarangayId?: string | null;
   initialSelectedPlaceId?: string | null;
   places: PlaceRecord[];
@@ -36,7 +37,10 @@ export interface MapScreenProps {
   onRefreshPlaces: () => void;
   onUserLocationChange: (location: UserLocation) => void;
   onToggleSavedPlace: (place: PlaceRecord) => void;
-  onOpenPlacePage: (place: PlaceRecord) => void;
+  onOpenPlacePage: (place: PlaceRecord, returnState: MapReturnState) => void;
+  onNavigationStateChange: (returnState: MapReturnState) => void;
+  onPlacePreviewOpen: (returnState: MapReturnState) => void;
+  onPlacePreviewClose: (returnState: MapReturnState) => void;
   onBack: () => void;
 }
 
@@ -44,6 +48,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
   activeBarangay,
   scope,
   initialPanelView,
+  initialCategoryId = 'all',
   initialBarangayId = null,
   initialSelectedPlaceId = null,
   places,
@@ -56,6 +61,9 @@ export const MapScreen: React.FC<MapScreenProps> = ({
   onUserLocationChange,
   onToggleSavedPlace,
   onOpenPlacePage,
+  onNavigationStateChange,
+  onPlacePreviewOpen,
+  onPlacePreviewClose,
   onBack,
 }) => {
   const initialVisitorBarangay = scope === 'visitor'
@@ -77,7 +85,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
   const mapPanelTitleId = useId();
   const mapPanelContentId = useId();
 
-  const [selectedCategory, setSelectedCategory] = useState<MapCategoryId>('all');
+  const [selectedCategory, setSelectedCategory] = useState<MapCategoryId>(initialCategoryId);
   const [panelView, setPanelView] = useState<MapPanelView>(initialPanelView);
   const [sheetLevel, setSheetLevel] = useState<MapSheetLevel>(1);
   const [dragOffset, setDragOffset] = useState(0);
@@ -103,9 +111,32 @@ export const MapScreen: React.FC<MapScreenProps> = ({
     : visitorBarangayScope?.colors[0] ?? '#76527D';
   const mapAccentSoft = `${mapAccent}18`;
 
+  const closePlacePreview = () => {
+    onPlacePreviewClose({
+      panelView: 'categories',
+      categoryId: selectedCategory,
+      selectedPlaceId: null,
+    });
+    setSelectedPlaceId(null);
+    setSheetLevel(1);
+    setDragOffset(0);
+  };
+
   useEffect(() => {
     latestLocationRef.current = userLocation;
   }, [userLocation]);
+
+  useEffect(() => {
+    onNavigationStateChange({ panelView, categoryId: selectedCategory, selectedPlaceId });
+  }, [onNavigationStateChange, panelView, selectedCategory, selectedPlaceId]);
+
+  useEffect(() => {
+    setSelectedPlaceId(initialSelectedPlaceId);
+  }, [initialSelectedPlaceId]);
+
+  useEffect(() => {
+    if (selectedPlaceId && !places.some((place) => place.id === selectedPlaceId)) closePlacePreview();
+  }, [places, selectedPlaceId]);
 
   useEffect(() => {
     const updateViewportHeight = () => setViewportHeight(Math.round(window.visualViewport?.height ?? window.innerHeight));
@@ -152,9 +183,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
       if (event.key !== 'Escape') return;
       event.preventDefault();
       if (selectedPlaceId) {
-        setSelectedPlaceId(null);
-        setSheetLevel(1);
-        setDragOffset(0);
+        closePlacePreview();
         return;
       }
       if (searchQuery) {
@@ -215,6 +244,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
   const selectedBarangayMarker = VILLAVERDE_BARANGAYS.find((barangay) => barangay.id === selectedBarangayId)
     ?? (isFocusedVisitorMap ? visitorBarangayScope : null);
   const selectedPlace = places.find((place) => place.id === selectedPlaceId) ?? null;
+  const selectedPlaceWebsite = selectedPlace ? getSafeHttpUrl(selectedPlace.website) : '';
   const selectedPlaceDistance = selectedPlace && userLocation ? getDistanceMeters(userLocation, selectedPlace) : null;
   const isSelectedPlaceSaved = selectedPlace ? savedPlaceIds.includes(selectedPlace.id) : false;
   const selectedCategoryData = MAP_CATEGORIES.find((category) => category.id === selectedCategory)!;
@@ -243,6 +273,8 @@ export const MapScreen: React.FC<MapScreenProps> = ({
   const showLayersControl = availableMapControlSpace >= 216;
   const placesStatusLabel = placesDataState === 'live'
     ? 'Live'
+    : placesDataState === 'cached'
+      ? 'Last live'
     : placesDataState === 'loading'
       ? 'Loading'
       : placesDataState === 'offline'
@@ -250,7 +282,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
         : 'Snapshot';
   const nearbyLocationBlocked = locationStatus === 'denied' || locationStatus === 'unavailable' || locationStatus === 'error';
   const nearbyIsInitialLoading = placesDataState === 'loading' && villaverdePlaces.length === 0;
-  const nearbyUsesFallbackData = placesDataState === 'offline' || placesDataState === 'snapshot';
+  const nearbyUsesFallbackData = placesDataState === 'offline' || placesDataState === 'snapshot' || placesDataState === 'cached';
   const panelTitle = panelView === 'layers'
     ? 'Map layers'
     : panelView === 'nearby'
@@ -411,7 +443,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
 
   const chooseCategory = (categoryId: MapCategoryId) => {
     setSelectedCategory(categoryId);
-    setSelectedPlaceId(null);
+    if (selectedPlaceId) closePlacePreview();
     setSelectedBarangayId(isFocusedVisitorMap ? visitorBarangayScope?.id ?? null : null);
     setPanelView('categories');
   };
@@ -419,7 +451,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
     if (!value) return;
-    setSelectedPlaceId(null);
+    if (selectedPlaceId) closePlacePreview();
     setSelectedBarangayId(null);
     setPanelView('categories');
     setSheetLevel((current) => Math.max(1, current) as MapSheetLevel);
@@ -428,7 +460,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
   const focusBarangay = (barangay: Barangay) => {
     if (isFocusedVisitorMap) setVisitorBarangayScopeId(barangay.id);
     setSelectedBarangayId(barangay.id);
-    setSelectedPlaceId(null);
+    if (selectedPlaceId) closePlacePreview();
     setSearchQuery('');
     setPanelView('categories');
     setSheetLevel(0);
@@ -436,6 +468,11 @@ export const MapScreen: React.FC<MapScreenProps> = ({
   };
 
   const focusPlace = (place: PlaceRecord) => {
+    onPlacePreviewOpen({
+      panelView: 'categories',
+      categoryId: selectedCategory,
+      selectedPlaceId: place.id,
+    });
     setSelectedPlaceId(place.id);
     setSelectedBarangayId(null);
     setSearchQuery('');
@@ -459,7 +496,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
   };
 
   const recenterMap = () => {
-    setSelectedPlaceId(null);
+    if (selectedPlaceId) closePlacePreview();
     setSelectedBarangayId(scope === 'local' ? activeBarangay.id : visitorBarangayScope?.id ?? null);
     moveMap(
       scope === 'local' ? activeBarangay.coordinates : visitorBarangayScope?.coordinates ?? VILLAVERDE_CENTER,
@@ -507,8 +544,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
             viewKey={viewKey}
             onZoomChange={setMapZoom}
             onMapClick={() => {
-              if (selectedPlaceId) setSheetLevel(1);
-              setSelectedPlaceId(null);
+              if (selectedPlaceId) closePlacePreview();
               if (scope === 'visitor') setSelectedBarangayId(isFocusedVisitorMap ? visitorBarangayScope?.id ?? null : null);
             }}
           />
@@ -792,9 +828,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
                 onPointerDown={(event: React.PointerEvent<HTMLButtonElement>) => event.stopPropagation()}
                 onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
                   event.stopPropagation();
-                  setSelectedPlaceId(null);
-                  setSheetLevel(1);
-                  setDragOffset(0);
+                  closePlacePreview();
                 }}
                 className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#EEF1E8] text-[#526158] transition-all hover:bg-[#E5EAE1] active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20"
                 aria-label="Close place preview"
@@ -888,7 +922,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
                           </div>
                           <p className="mt-2 text-xs font-bold text-[#748078]">{selectedPlace.subcategory} · {selectedPlace.barangay}</p>
                         </div>
-                        <button type="button" onClick={() => { setSelectedPlaceId(null); setSheetLevel(1); setDragOffset(0); }} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#EEF1E8] text-[#526158] transition-all hover:bg-[#E5EAE1] active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20" aria-label="Close place preview"><X className="h-4 w-4" /></button>
+                        <button type="button" onClick={closePlacePreview} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#EEF1E8] text-[#526158] transition-all hover:bg-[#E5EAE1] active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20" aria-label="Close place preview"><X className="h-4 w-4" /></button>
                       </div>
 
                       <div className="mt-4 grid grid-cols-2 gap-2.5">
@@ -906,7 +940,11 @@ export const MapScreen: React.FC<MapScreenProps> = ({
 
                       <button
                         type="button"
-                        onClick={() => onOpenPlacePage(selectedPlace)}
+                        onClick={() => onOpenPlacePage(selectedPlace, {
+                          panelView: 'categories',
+                          categoryId: selectedCategory,
+                          selectedPlaceId: selectedPlace.id,
+                        })}
                         className="mt-5 flex w-full items-center justify-between rounded-[20px] bg-[#E7F0E8] px-4 py-3.5 text-left text-[#2B6A4E] transition-all hover:bg-[#DDEBDF] active:scale-[0.99] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20"
                       >
                         <span>
@@ -916,15 +954,15 @@ export const MapScreen: React.FC<MapScreenProps> = ({
                         <ArrowRight className="h-5 w-5 shrink-0" aria-hidden="true" />
                       </button>
 
-                      <div className={`mt-3 grid gap-2 ${selectedPlace.website ? 'grid-cols-3' : 'grid-cols-2'}`} aria-label="Place actions">
+                      <div className={`mt-3 grid gap-2 ${selectedPlaceWebsite ? 'grid-cols-3' : 'grid-cols-2'}`} aria-label="Place actions">
                         <button type="button" onClick={() => onToggleSavedPlace(selectedPlace)} className={`flex min-w-0 flex-col items-center gap-1.5 rounded-[18px] border px-2 py-3 transition-all active:scale-[0.97] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20 ${isSelectedPlaceSaved ? 'border-[#2B6A4E] bg-[#E7F0E8] text-[#2B6A4E]' : 'border-[#D1DAD2] bg-white text-[#35463E]'}`} aria-pressed={isSelectedPlaceSaved} aria-label={isSelectedPlaceSaved ? `Remove ${selectedPlace.name} from saved places` : `Save ${selectedPlace.name}`}><Bookmark className={`h-5 w-5 ${isSelectedPlaceSaved ? 'fill-current' : ''}`} /><span className="text-[10px] font-extrabold">{isSelectedPlaceSaved ? 'Saved' : 'Save'}</span></button>
                         {selectedPlace.phone ? (
                           <a href={`tel:${selectedPlace.phone.replace(/[^+\d]/g, '')}`} className="flex min-w-0 flex-col items-center gap-1.5 rounded-[18px] border border-[#D1DAD2] bg-white px-2 py-3 text-[#35463E] transition-all active:scale-[0.97] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20"><Phone className="h-5 w-5" /><span className="text-[10px] font-extrabold">Call</span></a>
                         ) : (
                           <button type="button" disabled className="flex min-w-0 flex-col items-center gap-1.5 rounded-[18px] border border-[#E0E5DD] bg-[#F1F2EC] px-2 py-3 text-[#A1A8A1]"><Phone className="h-5 w-5" /><span className="text-[10px] font-extrabold">No phone</span></button>
                         )}
-                        {selectedPlace.website && (
-                          <a href={selectedPlace.website} target="_blank" rel="noreferrer" className="flex min-w-0 flex-col items-center gap-1.5 rounded-[18px] border border-[#D1DAD2] bg-white px-2 py-3 text-[#35463E] transition-all active:scale-[0.97] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20"><Globe2 className="h-5 w-5" /><span className="text-[10px] font-extrabold">Website</span></a>
+                        {selectedPlaceWebsite && (
+                          <a href={selectedPlaceWebsite} target="_blank" rel="noreferrer" className="flex min-w-0 flex-col items-center gap-1.5 rounded-[18px] border border-[#D1DAD2] bg-white px-2 py-3 text-[#35463E] transition-all active:scale-[0.97] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20"><Globe2 className="h-5 w-5" /><span className="text-[10px] font-extrabold">Website</span></a>
                         )}
                       </div>
 
@@ -945,7 +983,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
                     </div>
                   </article>
                   <div className="-mx-1 px-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1">
-                    <button type="button" onClick={() => { setSelectedPlaceId(null); setSheetLevel(1); setDragOffset(0); }} className="w-full rounded-full border border-[#D1DAD2] bg-[#FFFDF7] px-4 py-3 text-sm font-extrabold text-[#35463E] shadow-[0_8px_22px_rgba(31,47,39,.10)] transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20">Back to places</button>
+                    <button type="button" onClick={closePlacePreview} className="w-full rounded-full border border-[#D1DAD2] bg-[#FFFDF7] px-4 py-3 text-sm font-extrabold text-[#35463E] shadow-[0_8px_22px_rgba(31,47,39,.10)] transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20">Back to places</button>
                   </div>
                 </div>
               ) : searchQuery ? (
@@ -996,7 +1034,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
 
                   <div className={`mt-4 flex items-start gap-3 rounded-[22px] border p-4 ${placesDataState === 'live' ? 'border-[#C7D9C9] bg-[#EFF7EE]' : placesDataState === 'loading' ? 'border-[#D9E0D8] bg-[#F5F4EA]' : 'border-[#E7C98D] bg-[#FFF6E6]'}`} role="status" aria-live="polite">
                     {placesDataState === 'loading' ? <RefreshCw className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-[#526158]" /> : placesDataState === 'live' ? <Database className="mt-0.5 h-5 w-5 shrink-0 text-[#2B6A4E]" /> : <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[#9A5A24]" />}
-                    <div className="min-w-0 flex-1"><p className="text-sm font-bold text-[#26372F]">{placesDataState === 'live' ? 'Live Places database' : placesDataState === 'loading' ? 'Loading Places database' : placesDataState === 'offline' ? 'Offline places available' : 'Using built-in snapshot'}</p><p className="mt-1 text-xs font-medium leading-5 text-[#748078]">{placesLoadMessage}</p></div>
+                    <div className="min-w-0 flex-1"><p className="text-sm font-bold text-[#26372F]">{placesDataState === 'live' ? 'Live Places database' : placesDataState === 'cached' ? 'Using last live data' : placesDataState === 'loading' ? 'Loading Places database' : placesDataState === 'offline' ? 'Offline places available' : 'Using built-in snapshot'}</p><p className="mt-1 text-xs font-medium leading-5 text-[#748078]">{placesLoadMessage}</p></div>
                     <button type="button" onClick={() => { if (!isOnline) return; onRefreshPlaces(); }} disabled={!isOnline || placesDataState === 'loading'} className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-black/5 bg-white/70 text-[#526158] transition-all disabled:cursor-not-allowed disabled:opacity-45 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2B6A4E]/25" aria-label={isOnline ? 'Refresh place data' : 'Refresh unavailable while offline'}><RefreshCw className={`h-4 w-4 ${placesDataState === 'loading' ? 'animate-spin' : ''}`} /></button>
                   </div>
 
@@ -1116,7 +1154,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
                     <div className="flex items-start gap-3 rounded-[20px] border border-[#E7C98D] bg-[#FFF6E6] p-4" role="status" aria-live="polite">
                       <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[#9A5A24]" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-extrabold text-[#6F431C]">{placesDataState === 'offline' ? 'Offline nearby results' : 'Using saved nearby data'}</p>
+                        <p className="text-sm font-extrabold text-[#6F431C]">{placesDataState === 'offline' ? 'Offline nearby results' : placesDataState === 'cached' ? 'Using last live nearby data' : 'Using saved nearby data'}</p>
                         <p className="mt-1 text-xs font-medium leading-5 text-[#85501D]">Distances still work from saved coordinates, but live listing updates and external directions may be unavailable.</p>
                       </div>
                       {isOnline && (
@@ -1175,7 +1213,11 @@ export const MapScreen: React.FC<MapScreenProps> = ({
                             </div>
 
                             <div className="mt-3">
-                              <button type="button" onClick={() => onOpenPlacePage(place)} className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-[16px] border border-[#C7D9C9] bg-[#EFF7EE] px-3 py-2.5 text-xs font-extrabold text-[#2B6A4E] transition-all hover:bg-[#E5F1E5] active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20" aria-label={`Open the place page for ${place.name}`}>View place<ArrowRight className="h-4 w-4" /></button>
+                              <button type="button" onClick={() => onOpenPlacePage(place, {
+                                panelView: 'nearby',
+                                categoryId: selectedCategory,
+                                selectedPlaceId: null,
+                              })} className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-[16px] border border-[#C7D9C9] bg-[#EFF7EE] px-3 py-2.5 text-xs font-extrabold text-[#2B6A4E] transition-all hover:bg-[#E5F1E5] active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20" aria-label={`Open the place page for ${place.name}`}>View place<ArrowRight className="h-4 w-4" /></button>
                             </div>
                           </article>
                         );

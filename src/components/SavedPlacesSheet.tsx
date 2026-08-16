@@ -559,7 +559,7 @@ export const SavedPlacesSheet: React.FC<SavedPlacesSheetProps> = ({
           >
             {isActive && (
               <>
-                {(dataState === 'offline' || dataState === 'snapshot') && (
+                {(dataState === 'offline' || dataState === 'snapshot' || dataState === 'cached') && (
                   <div
                     className="flex items-start gap-3 rounded-[20px] border border-[#E8D6AF] bg-[#FFF8E8] p-4"
                     role="status"
@@ -570,7 +570,7 @@ export const SavedPlacesSheet: React.FC<SavedPlacesSheetProps> = ({
                     />
                     <div>
                       <p className="text-sm font-extrabold text-[#6F451C]">
-                        {dataState === 'offline' ? 'You are offline' : 'Live place data is unavailable'}
+                        {dataState === 'offline' ? 'You are offline' : dataState === 'cached' ? 'Using the last live place data' : 'Live place data is unavailable'}
                       </p>
                       <p className="mt-1 text-xs font-medium leading-5 text-[#7A644C]">
                         Your saved collections remain available from this device. Some current place
