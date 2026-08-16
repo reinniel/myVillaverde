@@ -9,7 +9,7 @@ myVillaverde is a mobile-first local guide for Villaverde, Nueva Vizcaya. It com
 - The Phase 6 recovery baseline and Phase 6B.1 barangay cards are complete.
 - Phase 6B.2, the barangay detail flow, is complete.
 - Phase 6C, the ID-backed visitor trip planner and multi-stop route flow, is complete.
-- Phase 6D, the final release-hardening and regression pass, is in progress.
+- Phase 6D, the final release-hardening and regression pass, is complete.
 
 ## Working copy and checkpoints
 
@@ -17,7 +17,7 @@ myVillaverde is a mobile-first local guide for Villaverde, Nueva Vizcaya. It com
 - **Versioned code mirror:** the `main` branch of this GitHub repository after a verified AI Studio commit.
 - **Place data:** the published `Places` tab configured by `DEFAULT_PLACES_CSV_URL` in `src/data/config.ts`.
 - **Offline place data:** generated `FALLBACK_PLACES` in `src/data/places.ts`.
-- **Roadmap:** the `myVillaverde Phases` Google Doc.
+- **Roadmap:** the `myVillaverde Development Roadmap` Google Doc.
 
 Google AI Studio syncs changes outward to GitHub; GitHub changes do not automatically flow back into the live AI Studio app. Make application changes in AI Studio first, verify them there, and then commit the matching checkpoint to GitHub. Downloaded ZIP files remain useful inspection snapshots but are not a separate code history.
 

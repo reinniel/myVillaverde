@@ -1,6 +1,6 @@
 # Architecture
 
-myVillaverde is a client-side Vite and React application. The current architecture grew out of the Phase 3R extraction refactor and now supports the completed map, place-page, nearby, saved, Phase 6A visitor discovery, Phase 6B barangay discovery, and the Phase 6C trip-planning MVP.
+myVillaverde is a client-side Vite and React application. The current architecture grew out of the Phase 3R extraction refactor and now supports the completed map, place-page, nearby, saved, Phase 6A visitor discovery, Phase 6B barangay discovery, Phase 6C trip-planning MVP, and Phase 6D release-hardening pass.
 
 ## Application boundaries
 
@@ -39,14 +39,14 @@ The published Google Sheet is authoritative. Run `npm run data:sync` after canon
 - Photos require both an approved permission value and a supported HTTP(S) URL.
 - Missing ratings, popularity, operating details, or barangay claims must remain unknown rather than being fabricated.
 
-## Current delivery sequence
+## Release workflow
 
 1. Keep Google AI Studio as the active working copy and GitHub `main` as its verified versioned mirror.
 2. Keep the generated fallback synchronized with the live Places source.
 3. Run typecheck, production build, and preview checks before committing from AI Studio to GitHub.
 4. Confirm the GitHub checkpoint matches the verified AI Studio state.
-5. Complete visual and interaction verification of the Phase 6D empty, offline, loading, mobile, accessibility, persistence, and recovery states.
-6. Run `npm run verify` for the final release gate; it checks source data, TypeScript, and a forced production build.
+5. Complete visual and interaction verification of empty, offline, loading, mobile, accessibility, persistence, and recovery states.
+6. Run `npm run verify` for every release gate; it checks source data, TypeScript, and a forced production build.
 
 ## Deferred decisions
 
