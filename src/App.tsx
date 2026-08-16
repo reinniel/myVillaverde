@@ -31,7 +31,7 @@ import {
   removePlacePageFromUrl, removeVisitorBarangayFromUrl,
 } from './utils/placeNavigation';
 import {
-  formatDistance, getDirectionsUrl, getDistanceMeters, MAX_TRIP_STOPS, placeMatchesGuideCategory,
+  formatDistance, getDistanceMeters, MAX_TRIP_STOPS, placeMatchesGuideCategory,
 } from './utils/places';
 import './styles/app.css';
 
@@ -659,15 +659,6 @@ export default function App() {
                     </span>
                     <ChevronRight className="h-4 w-4 shrink-0 text-[#748078]" />
                   </button>
-                  <a
-                    href={getDirectionsUrl(place)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#E7F0E8] text-[#2B6A4E] transition active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20"
-                    aria-label={`Get directions to ${place.name}`}
-                  >
-                    <Navigation className="h-4 w-4" />
-                  </a>
                 </article>
               ))}
             </div>
