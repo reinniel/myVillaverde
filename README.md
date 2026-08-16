@@ -23,9 +23,9 @@
 ## Preview
 
 <p align="center">
-  <img src="docs/assets/villaverdeko-home.png" width="300" alt="VillaverdeKo local dashboard">
+  <img src="docs/assets/villaverdeko-home.png" height="500" alt="VillaverdeKo local dashboard">
   &nbsp;&nbsp;
-  <img src="docs/assets/villaverdemo-home.png" width="300" alt="VillaverdeMo visitor dashboard">
+  <img src="docs/assets/villaverdemo-home.png" height="500" alt="VillaverdeMo visitor dashboard">
 </p>
 
 ## What it does
