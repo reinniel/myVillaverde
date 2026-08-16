@@ -3,7 +3,7 @@ import type { Map as LeafletMap } from 'leaflet';
 import { Circle, CircleMarker, MapContainer, TileLayer, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import {
-  AlertTriangle, ArrowLeft, ArrowRight, Bookmark, Check, ChevronRight, Clock3, Database, ExternalLink, Globe2, Layers3,
+  AlertTriangle, ArrowLeft, ArrowRight, Bookmark, Check, ChevronRight, Clock3, Database, Globe2, Layers3,
   LocateFixed, Map as MapIcon, MapPin, Minus, Navigation, Phone, Plus, RefreshCw, Search,
   ShieldCheck, X,
 } from 'lucide-react';
@@ -19,7 +19,7 @@ import { EmptyState } from '../components/EmptyState';
 import {
   LOCAL_DEFAULT_ZOOM, VISITOR_DEFAULT_ZOOM, VILLAVERDE_CENTER, readStoredMapView,
 } from '../utils/mapView';
-import { formatDistance, getDirectionsUrl, getDistanceMeters, getOpeningHoursSummary } from '../utils/places';
+import { formatDistance, getDistanceMeters, getOpeningHoursSummary } from '../utils/places';
 
 export interface MapScreenProps {
   activeBarangay: Barangay;
@@ -914,18 +914,15 @@ export const MapScreen: React.FC<MapScreenProps> = ({
                         <ArrowRight className="h-5 w-5 shrink-0" aria-hidden="true" />
                       </button>
 
-                      <div className="mt-3 grid grid-cols-4 gap-2" aria-label="Place actions">
-                        <a href={getDirectionsUrl(selectedPlace)} target="_blank" rel="noreferrer" className="group flex min-w-0 flex-col items-center gap-1.5 rounded-[18px] bg-[#26372F] px-2 py-3 text-white transition-all active:scale-[0.97] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#26372F]/25"><Navigation className="h-5 w-5" /><span className="text-[10px] font-extrabold">Directions</span></a>
+                      <div className={`mt-3 grid gap-2 ${selectedPlace.website ? 'grid-cols-3' : 'grid-cols-2'}`} aria-label="Place actions">
                         <button type="button" onClick={() => onToggleSavedPlace(selectedPlace)} className={`flex min-w-0 flex-col items-center gap-1.5 rounded-[18px] border px-2 py-3 transition-all active:scale-[0.97] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20 ${isSelectedPlaceSaved ? 'border-[#2B6A4E] bg-[#E7F0E8] text-[#2B6A4E]' : 'border-[#D1DAD2] bg-white text-[#35463E]'}`} aria-pressed={isSelectedPlaceSaved} aria-label={isSelectedPlaceSaved ? `Remove ${selectedPlace.name} from saved places` : `Save ${selectedPlace.name}`}><Bookmark className={`h-5 w-5 ${isSelectedPlaceSaved ? 'fill-current' : ''}`} /><span className="text-[10px] font-extrabold">{isSelectedPlaceSaved ? 'Saved' : 'Save'}</span></button>
                         {selectedPlace.phone ? (
                           <a href={`tel:${selectedPlace.phone.replace(/[^+\d]/g, '')}`} className="flex min-w-0 flex-col items-center gap-1.5 rounded-[18px] border border-[#D1DAD2] bg-white px-2 py-3 text-[#35463E] transition-all active:scale-[0.97] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20"><Phone className="h-5 w-5" /><span className="text-[10px] font-extrabold">Call</span></a>
                         ) : (
                           <button type="button" disabled className="flex min-w-0 flex-col items-center gap-1.5 rounded-[18px] border border-[#E0E5DD] bg-[#F1F2EC] px-2 py-3 text-[#A1A8A1]"><Phone className="h-5 w-5" /><span className="text-[10px] font-extrabold">No phone</span></button>
                         )}
-                        {selectedPlace.website || selectedPlace.sourceUrl ? (
-                          <a href={selectedPlace.website || selectedPlace.sourceUrl} target="_blank" rel="noreferrer" className="flex min-w-0 flex-col items-center gap-1.5 rounded-[18px] border border-[#D1DAD2] bg-white px-2 py-3 text-[#35463E] transition-all active:scale-[0.97] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20">{selectedPlace.website ? <Globe2 className="h-5 w-5" /> : <ExternalLink className="h-5 w-5" />}<span className="text-[10px] font-extrabold">{selectedPlace.website ? 'Website' : 'Source'}</span></a>
-                        ) : (
-                          <button type="button" disabled className="flex min-w-0 flex-col items-center gap-1.5 rounded-[18px] border border-[#E0E5DD] bg-[#F1F2EC] px-2 py-3 text-[#A1A8A1]"><ExternalLink className="h-5 w-5" /><span className="text-[10px] font-extrabold">No link</span></button>
+                        {selectedPlace.website && (
+                          <a href={selectedPlace.website} target="_blank" rel="noreferrer" className="flex min-w-0 flex-col items-center gap-1.5 rounded-[18px] border border-[#D1DAD2] bg-white px-2 py-3 text-[#35463E] transition-all active:scale-[0.97] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20"><Globe2 className="h-5 w-5" /><span className="text-[10px] font-extrabold">Website</span></a>
                         )}
                       </div>
 
@@ -1175,13 +1172,8 @@ export const MapScreen: React.FC<MapScreenProps> = ({
                               </div>
                             </div>
 
-                            <div className="mt-3 grid grid-cols-2 gap-2">
-                              {isOnline ? (
-                                <a href={getDirectionsUrl(place)} target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-[16px] bg-[#26372F] px-3 py-2.5 text-xs font-extrabold text-white transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#26372F]/25" aria-label={`Get directions to ${place.name}`}><Navigation className="h-4 w-4" />Directions</a>
-                              ) : (
-                                <button type="button" disabled className="inline-flex min-h-10 cursor-not-allowed items-center justify-center gap-2 rounded-[16px] bg-[#E5E7E2] px-3 py-2.5 text-xs font-extrabold text-[#8A918C]" aria-label={`Directions to ${place.name} are unavailable offline`}><Navigation className="h-4 w-4" />Offline</button>
-                              )}
-                              <button type="button" onClick={() => onOpenPlacePage(place)} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-[16px] border border-[#C7D9C9] bg-[#EFF7EE] px-3 py-2.5 text-xs font-extrabold text-[#2B6A4E] transition-all hover:bg-[#E5F1E5] active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20" aria-label={`Open the place page for ${place.name}`}>View place<ArrowRight className="h-4 w-4" /></button>
+                            <div className="mt-3">
+                              <button type="button" onClick={() => onOpenPlacePage(place)} className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-[16px] border border-[#C7D9C9] bg-[#EFF7EE] px-3 py-2.5 text-xs font-extrabold text-[#2B6A4E] transition-all hover:bg-[#E5F1E5] active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20" aria-label={`Open the place page for ${place.name}`}>View place<ArrowRight className="h-4 w-4" /></button>
                             </div>
                           </article>
                         );

@@ -181,8 +181,7 @@ export const PlacePage: React.FC<PlacePageProps> = ({
   const accent = CATEGORY_MARKER_COLORS[place.categoryId];
   const distance = userLocation ? getDistanceMeters(userLocation, place) : null;
   const isVerified = place.status.toLowerCase() === 'verified';
-  const primaryExternalUrl = place.website || place.sourceUrl;
-  const primaryExternalLabel = place.website ? 'Website' : 'Source';
+  const primaryExternalUrl = place.website;
   const coverPhotoUrl = coverPhotoFailed ? '' : (approvedPhotoUrls[coverPhotoIndex] || '');
   const photoFallbackLabel = approvedPhotoUrls.length > 0 ? 'Photo unavailable' : 'No approved photo';
   const openingHours = getOpeningHoursSummary(place.openingHours);
@@ -289,7 +288,7 @@ export const PlacePage: React.FC<PlacePageProps> = ({
         {(place.phone || primaryExternalUrl) && (
           <section className="mt-3 grid grid-cols-2 gap-2.5" aria-label="Contact actions">
             {place.phone && <a href={`tel:${place.phone.replace(/[^+\d]/g, '')}`} className="flex items-center justify-center gap-2 rounded-[20px] border border-[#D1DAD2] bg-[#FFFDF7] px-4 py-3.5 text-sm font-extrabold text-[#35463E] transition active:scale-[0.99] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20"><Phone className="h-4 w-4" />Call</a>}
-            {primaryExternalUrl && <a href={primaryExternalUrl} target="_blank" rel="noreferrer" className={`flex items-center justify-center gap-2 rounded-[20px] border border-[#D1DAD2] bg-[#FFFDF7] px-4 py-3.5 text-sm font-extrabold text-[#35463E] transition active:scale-[0.99] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20 ${!place.phone ? 'col-span-2' : ''}`}>{place.website ? <Globe2 className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}{primaryExternalLabel}</a>}
+            {primaryExternalUrl && <a href={primaryExternalUrl} target="_blank" rel="noreferrer" className={`flex items-center justify-center gap-2 rounded-[20px] border border-[#D1DAD2] bg-[#FFFDF7] px-4 py-3.5 text-sm font-extrabold text-[#35463E] transition active:scale-[0.99] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20 ${!place.phone ? 'col-span-2' : ''}`}><Globe2 className="h-4 w-4" />Website</a>}
           </section>
         )}
 
