@@ -20,8 +20,11 @@ jobs:
       - name: Assemble candidate files
         shell: bash
         run: |
+          cat .candidate-upload/PlacePage.tsx.part-* > src/screens/PlacePage.tsx
+          cat .candidate-upload/SavedPlacesSheet.tsx.part-* > src/components/SavedPlacesSheet.tsx
           cat .candidate-upload/v101-remaining.b64.part-* > /tmp/v101-remaining.b64
           base64 --decode /tmp/v101-remaining.b64 > /tmp/v101-remaining.tar.xz
+          echo "536995661b36c7fb0744af05fb7dd81c695a3ed24d6e3464f9ee218293a044f1  /tmp/v101-remaining.tar.xz" | sha256sum -c -
           tar -xJf /tmp/v101-remaining.tar.xz -C .
           rm -rf .candidate-upload
           rm .github/workflows/assemble-v1.0.1.yml
