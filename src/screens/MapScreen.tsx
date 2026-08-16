@@ -26,6 +26,7 @@ export interface MapScreenProps {
   scope: CategoryScope;
   initialPanelView: MapPanelView;
   initialBarangayId?: string | null;
+  initialSelectedPlaceId?: string | null;
   places: PlaceRecord[];
   placesDataState: PlacesDataState;
   placesLoadMessage: string;
@@ -44,6 +45,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
   scope,
   initialPanelView,
   initialBarangayId = null,
+  initialSelectedPlaceId = null,
   places,
   placesDataState,
   placesLoadMessage,
@@ -85,7 +87,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
   const [selectedBarangayId, setSelectedBarangayId] = useState<string | null>(
     scope === 'local' ? activeBarangay.id : initialVisitorBarangay?.id ?? null,
   );
-  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(initialSelectedPlaceId);
   const [mapZoom, setMapZoom] = useState(initialViewRef.current.zoom);
   const [viewportHeight, setViewportHeight] = useState(() => typeof window === 'undefined' ? 800 : Math.round(window.visualViewport?.height ?? window.innerHeight));
   const [mapTileState, setMapTileState] = useState<MapTileState>('loading');

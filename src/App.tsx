@@ -40,6 +40,11 @@ const getValidBarangayId = (barangayId: string | null | undefined) =>
     ? barangayId
     : null;
 
+const readMapPlaceIdFromHistory = () => {
+  const placeId: unknown = window.history.state?.myVillaverdeMapPlaceId;
+  return typeof placeId === 'string' ? placeId : null;
+};
+
 const readTripPlaceIds = () => {
   try {
     const raw = localStorage.getItem(TRIP_PLAN_STORAGE_KEY);
@@ -72,6 +77,9 @@ export default function App() {
   const [mapInitialPanelView, setMapInitialPanelView] = useState<MapPanelView>('categories');
   const [mapInitialBarangayId, setMapInitialBarangayId] = useState<string | null>(() =>
     getValidBarangayId(readMapNavigationFromUrl()?.barangayId),
+  );
+  const [mapInitialPlaceId, setMapInitialPlaceId] = useState<string | null>(() =>
+    readMapNavigationFromUrl() ? readMapPlaceIdFromHistory() : null,
   );
   const [selectedVisitorBarangayId, setSelectedVisitorBarangayId] = useState<string | null>(() =>
     getValidBarangayId(readVisitorBarangayIdFromUrl() ?? readMapNavigationFromUrl()?.barangayId),
@@ -140,11 +148,13 @@ export default function App() {
       const nextVisitorBarangayId = readVisitorBarangayIdFromUrl();
       const validVisitorBarangayId = getValidBarangayId(nextVisitorBarangayId);
       const validMapBarangayId = getValidBarangayId(nextMapNavigation?.barangayId);
+      const nextMapPlaceId = nextMapNavigation ? readMapPlaceIdFromHistory() : null;
 
       setPlacePageId(nextPlacePageId);
       setMapScope(nextMapNavigation?.scope ?? null);
       setMapInitialPanelView('categories');
       setMapInitialBarangayId(validMapBarangayId);
+      setMapInitialPlaceId(nextMapPlaceId);
       setSelectedVisitorBarangayId(validVisitorBarangayId ?? validMapBarangayId);
       setActiveModal(!nextPlacePageId && !nextMapNavigation && validVisitorBarangayId ? 'visitor-barangay' : null);
       if (nextMapNavigation?.scope === 'local') setMode('ko');
@@ -235,6 +245,16 @@ export default function App() {
   const openPlacePage = (place: PlaceRecord) => {
     rememberRecentlyViewedPlace(place);
     navigateToPlacePage(place.id);
+  };
+
+  const openMapPlacePage = (place: PlaceRecord) => {
+    window.history.replaceState(
+      { ...window.history.state, myVillaverdeMapPlaceId: place.id },
+      '',
+      window.location.href,
+    );
+    setMapInitialPlaceId(place.id);
+    openPlacePage(place);
   };
 
   const openRecentlyViewedPlace = (placeId: string) => {
@@ -383,13 +403,20 @@ export default function App() {
   ) => {
     const validInitialBarangayId = scope === 'visitor' ? getValidBarangayId(initialBarangayId) : null;
     window.history.pushState(
-      { ...window.history.state, myVillaverdeMapEntry: true, mapScope: scope, barangayId: validInitialBarangayId },
+      {
+        ...window.history.state,
+        myVillaverdeMapEntry: true,
+        myVillaverdeMapPlaceId: null,
+        mapScope: scope,
+        barangayId: validInitialBarangayId,
+      },
       '',
       buildMapUrl(scope, validInitialBarangayId),
     );
     setActiveModal(null);
     setMapInitialPanelView(initialPanelView);
     setMapInitialBarangayId(validInitialBarangayId);
+    setMapInitialPlaceId(null);
     setMapScope(scope);
     window.scrollTo({ top: 0, behavior: 'auto' });
   };
@@ -400,9 +427,14 @@ export default function App() {
       return;
     }
     const returnBarangayId = mapScope === 'visitor' ? mapInitialBarangayId : null;
-    window.history.replaceState({ ...window.history.state, myVillaverdeMapEntry: false }, '', removeMapFromUrl());
+    window.history.replaceState(
+      { ...window.history.state, myVillaverdeMapEntry: false, myVillaverdeMapPlaceId: null },
+      '',
+      removeMapFromUrl(),
+    );
     setMapScope(null);
     setMapInitialBarangayId(null);
+    setMapInitialPlaceId(null);
     if (returnBarangayId) {
       setSelectedVisitorBarangayId(returnBarangayId);
       setActiveModal('visitor-barangay');
@@ -435,6 +467,7 @@ export default function App() {
             scope={mapScope}
             initialPanelView={mapInitialPanelView}
             initialBarangayId={mapInitialBarangayId}
+            initialSelectedPlaceId={mapInitialPlaceId}
             places={places}
             placesDataState={placesDataState}
             placesLoadMessage={placesLoadMessage}
@@ -444,7 +477,7 @@ export default function App() {
             onRefreshPlaces={refreshPlaces}
             onUserLocationChange={setUserLocation}
             onToggleSavedPlace={handleToggleSavedPlace}
-            onOpenPlacePage={openPlacePage}
+            onOpenPlacePage={openMapPlacePage}
             onBack={closeMap}
           />
         ) : (
