@@ -8,7 +8,8 @@ myVillaverde is a mobile-first local guide for Villaverde, Nueva Vizcaya. It com
 - Phase 6A, the visitor discovery home, is complete.
 - The Phase 6 recovery baseline and Phase 6B.1 barangay cards are complete.
 - Phase 6B.2, the barangay detail flow, is complete.
-- Phase 6C, the ID-backed visitor trip planner and multi-stop route flow, is in progress.
+- Phase 6C, the ID-backed visitor trip planner and multi-stop route flow, is complete.
+- Phase 6D, the final release-hardening and regression pass, is in progress.
 
 ## Working copy and checkpoints
 
@@ -35,6 +36,7 @@ Useful checks:
 npm run lint
 npm run build
 npm run check
+npm run verify
 ```
 
 ## Places data flow
@@ -55,7 +57,7 @@ npm run data:sync -- --source ./places.csv
 npm run data:check -- --source ./places.csv
 ```
 
-The sync command validates required columns, IDs, categories, and coordinates before replacing `src/data/places.ts`. Commit the generated change with the related data update.
+The sync command validates required columns, IDs, categories, and coordinates before replacing `src/data/places.ts`. Commit the generated change with the related data update. `npm run verify` combines the live/fallback data check, TypeScript validation, and a forced production build for release handoffs.
 
 ## Current product boundaries
 
@@ -65,5 +67,6 @@ The sync command validates required columns, IDs, categories, and coordinates be
 - Ratings, popularity, and tourism claims are not invented from missing data.
 - Barangay cards and detail sheets derive counts, categories, and place links from the current database, including honest empty states.
 - Trip plans store only ordered place IDs, resolve every stop against the current database, prevent duplicates, and open routes through Google Maps.
+- Browser zoom remains available, reduced-motion preferences are respected, and a top-level recovery screen protects locally persisted data from render failures.
 
 See `ARCHITECTURE.md` for module boundaries and data flow.

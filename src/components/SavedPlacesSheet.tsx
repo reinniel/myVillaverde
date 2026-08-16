@@ -185,6 +185,12 @@ export const SavedPlacesSheet: React.FC<SavedPlacesSheetProps> = ({
   }, [legacyWantToVisitIds, places]);
 
   const favoriteIds = useMemo(() => new Set(savedPlaces.map((place) => place.id)), [savedPlaces]);
+  const favoritePlaces = useMemo(
+    () => savedPlaces.map(
+      (snapshot) => places.find((place) => place.id === snapshot.id) ?? snapshot,
+    ),
+    [places, savedPlaces],
+  );
   const wantToVisitSnapshotIds = useMemo(
     () => new Set(wantToVisitSnapshots.map((place) => place.id)),
     [wantToVisitSnapshots],
@@ -211,7 +217,7 @@ export const SavedPlacesSheet: React.FC<SavedPlacesSheetProps> = ({
   const unresolvedRecentCount = Math.max(0, recentlyViewedPlaces.length - recentPlaces.length);
 
   const collections = [
-    { id: 'favorites' as const, label: 'Favorites', icon: Heart, count: savedPlaces.length },
+    { id: 'favorites' as const, label: 'Favorites', icon: Heart, count: favoritePlaces.length },
     {
       id: 'want-to-visit' as const,
       label: 'Want to Visit',
@@ -227,7 +233,7 @@ export const SavedPlacesSheet: React.FC<SavedPlacesSheetProps> = ({
   ];
 
   const collectionPlaces = activeCollection === 'favorites'
-    ? savedPlaces
+    ? favoritePlaces
     : activeCollection === 'want-to-visit'
       ? wantToVisitPlaces
       : recentPlaces;

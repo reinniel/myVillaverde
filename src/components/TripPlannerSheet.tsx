@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
-  ArrowDown, ArrowUp, ExternalLink, MapPin, Plus, Route, Search, Trash2, WifiOff,
+  AlertTriangle, ArrowDown, ArrowUp, ExternalLink, MapPin, Plus, RefreshCw, Route,
+  Search, Trash2, WifiOff,
 } from 'lucide-react';
 import type { PlaceRecord, PlacesDataState } from '../types/app';
 import { CATEGORY_MARKER_COLORS } from '../data/categories';
@@ -10,6 +11,7 @@ interface TripPlannerSheetProps {
   placeIds: string[];
   places: PlaceRecord[];
   dataState: PlacesDataState;
+  isOnline: boolean;
   onAddPlace: (place: PlaceRecord) => void;
   onRemovePlace: (placeId: string) => void;
   onMovePlace: (placeId: string, direction: -1 | 1) => void;
@@ -21,6 +23,7 @@ export const TripPlannerSheet: React.FC<TripPlannerSheetProps> = ({
   placeIds,
   places,
   dataState,
+  isOnline,
   onAddPlace,
   onRemovePlace,
   onMovePlace,
@@ -37,6 +40,10 @@ export const TripPlannerSheet: React.FC<TripPlannerSheetProps> = ({
     () => placeIds.map((placeId) => placeById.get(placeId)).filter((place): place is PlaceRecord => Boolean(place)),
     [placeById, placeIds],
   );
+  const unresolvedPlaceIds = useMemo(
+    () => placeIds.filter((placeId) => !placeById.has(placeId)),
+    [placeById, placeIds],
+  );
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const availablePlaces = useMemo(() => {
     const selectedIds = new Set(placeIds);
@@ -47,16 +54,28 @@ export const TripPlannerSheet: React.FC<TripPlannerSheetProps> = ({
       .sort((first, second) => first.name.localeCompare(second.name));
   }, [normalizedQuery, placeIds, places]);
   const isFull = placeIds.length >= MAX_TRIP_STOPS;
-  const routeUrl = getTripDirectionsUrl(tripPlaces);
+  const routeUrl = unresolvedPlaceIds.length === 0 ? getTripDirectionsUrl(tripPlaces) : '';
 
   return (
     <div className="space-y-5">
-      {dataState !== 'live' && (
+      {dataState === 'loading' && (
+        <div className="flex items-start gap-3 rounded-[20px] border border-[#D9E0D8] bg-[#F5F4EA] p-4 text-[#526158]" role="status" aria-live="polite">
+          <RefreshCw className="mt-0.5 h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
+          <p className="text-xs font-semibold leading-5">Checking the live Places database. Your saved itinerary remains available.</p>
+        </div>
+      )}
+      {dataState === 'offline' && (
         <div className="flex items-start gap-3 rounded-[20px] border border-[#E8D6AF] bg-[#FFF8E8] p-4 text-[#6F451C]" role="status">
           <WifiOff className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <p className="text-xs font-semibold leading-5">
-            Your route is available offline. Live listing updates may not be current.
+            Your itinerary is available offline. Reconnect before opening the route in Google Maps.
           </p>
+        </div>
+      )}
+      {dataState === 'snapshot' && (
+        <div className="flex items-start gap-3 rounded-[20px] border border-[#E8D6AF] bg-[#FFF8E8] p-4 text-[#6F451C]" role="status">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <p className="text-xs font-semibold leading-5">Using the built-in place snapshot because the live database could not be reached.</p>
         </div>
       )}
 
@@ -64,8 +83,8 @@ export const TripPlannerSheet: React.FC<TripPlannerSheetProps> = ({
         <div className="flex items-end justify-between gap-3">
           <div>
             <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#9A6A45]">Your route</p>
-            <h3 id="trip-stops-heading" className="mt-1 font-serif-header text-[23px] font-bold text-[#18241F]">
-              {tripPlaces.length === 0 ? 'Choose your stops' : `${tripPlaces.length} ${tripPlaces.length === 1 ? 'stop' : 'stops'}`}
+            <h3 id="trip-stops-heading" className="mt-1 font-serif-header text-[23px] font-bold text-[#18241F]" aria-live="polite">
+              {placeIds.length === 0 ? 'Choose your stops' : `${placeIds.length} ${placeIds.length === 1 ? 'stop' : 'stops'}`}
             </h3>
           </div>
           {tripPlaces.length > 0 && (
@@ -86,7 +105,17 @@ export const TripPlannerSheet: React.FC<TripPlannerSheetProps> = ({
           )}
         </div>
 
-        {tripPlaces.length === 0 ? (
+        {unresolvedPlaceIds.length > 0 && (
+          <div className="mt-3 flex items-start justify-between gap-3 rounded-[18px] border border-[#E7C98D] bg-[#FFF6E6] p-4 text-[#85501D]" role="status">
+            <div className="flex min-w-0 items-start gap-2.5">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <p className="text-xs font-semibold leading-5">{unresolvedPlaceIds.length} saved {unresolvedPlaceIds.length === 1 ? 'stop is' : 'stops are'} unavailable in the current place data. Remove {unresolvedPlaceIds.length === 1 ? 'it' : 'them'} before opening the route.</p>
+            </div>
+            <button type="button" onClick={() => unresolvedPlaceIds.forEach(onRemovePlace)} className="min-h-10 shrink-0 rounded-full bg-white/75 px-3 text-[10px] font-extrabold focus:outline-none focus-visible:ring-4 focus-visible:ring-[#9A5A24]/20">Remove</button>
+          </div>
+        )}
+
+        {placeIds.length === 0 ? (
           <div className="mt-3 rounded-[26px] border border-dashed border-[#C9D3CA] bg-[#F6F8F2] px-5 py-7 text-center">
             <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-[#E7EEE5] text-[#2B6A4E]"><Route className="h-6 w-6" /></span>
             <p className="mt-4 text-sm font-extrabold text-[#26372F]">Start with a real place</p>
@@ -101,7 +130,7 @@ export const TripPlannerSheet: React.FC<TripPlannerSheetProps> = ({
                   <span className="block truncate text-sm font-extrabold text-[#26372F]">{place.name}</span>
                   <span className="mt-0.5 block truncate text-[11px] font-medium text-[#748078]">{place.subcategory} · {place.barangay}</span>
                 </button>
-                <div className="flex shrink-0 items-center" aria-label={`Reorder or remove ${place.name}`}>
+                <div className="flex shrink-0 items-center" role="group" aria-label={`Reorder or remove ${place.name}`}>
                   <button type="button" onClick={() => onMovePlace(place.id, -1)} disabled={index === 0} className="grid h-10 w-9 place-items-center rounded-xl text-[#526158] disabled:opacity-25 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20" aria-label={`Move ${place.name} earlier`}><ArrowUp className="h-4 w-4" /></button>
                   <button type="button" onClick={() => onMovePlace(place.id, 1)} disabled={index === tripPlaces.length - 1} className="grid h-10 w-9 place-items-center rounded-xl text-[#526158] disabled:opacity-25 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20" aria-label={`Move ${place.name} later`}><ArrowDown className="h-4 w-4" /></button>
                   <button type="button" onClick={() => onRemovePlace(place.id)} className="grid h-10 w-9 place-items-center rounded-xl text-[#A4513D] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#A4513D]/20" aria-label={`Remove ${place.name} from trip`}><Trash2 className="h-4 w-4" /></button>
@@ -112,11 +141,14 @@ export const TripPlannerSheet: React.FC<TripPlannerSheetProps> = ({
         )}
 
         {routeUrl && (
-          <a href={routeUrl} target="_blank" rel="noreferrer" className="mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-[20px] bg-[#26372F] px-5 text-sm font-extrabold text-white shadow-sm transition active:scale-[0.99] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#26372F]/25">
+          isOnline ? <a href={routeUrl} target="_blank" rel="noreferrer" className="mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-[20px] bg-[#26372F] px-5 text-sm font-extrabold text-white shadow-sm transition active:scale-[0.99] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#26372F]/25">
             <Route className="h-5 w-5" />
             {tripPlaces.length === 1 ? 'Directions to this stop' : 'Open route in Google Maps'}
             <ExternalLink className="h-4 w-4" />
-          </a>
+          </a> : <button type="button" disabled className="mt-3 flex min-h-14 w-full cursor-not-allowed items-center justify-center gap-2 rounded-[20px] bg-[#DDE2DC] px-5 text-sm font-extrabold text-[#748078]">
+            <WifiOff className="h-5 w-5" aria-hidden="true" />
+            Reconnect to open route
+          </button>
         )}
         <p className="mt-2 text-center text-[10px] font-semibold leading-4 text-[#89928A]">Order matters. Maps starts from your current location when available.</p>
       </section>
@@ -127,11 +159,11 @@ export const TripPlannerSheet: React.FC<TripPlannerSheetProps> = ({
             <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#7A667C]">From the guide</p>
             <h3 id="add-stop-heading" className="mt-1 font-serif-header text-[22px] font-bold text-[#18241F]">Add a stop</h3>
           </div>
-          <span className="rounded-full bg-[#E7EEE5] px-3 py-1.5 text-[10px] font-extrabold text-[#526158]">{placeIds.length}/{MAX_TRIP_STOPS}</span>
+          <span className="rounded-full bg-[#E7EEE5] px-3 py-1.5 text-[10px] font-extrabold text-[#526158]" aria-live="polite">{placeIds.length}/{MAX_TRIP_STOPS}</span>
         </div>
         <div className="relative mt-3">
           <label htmlFor="trip-place-search" className="sr-only">Search places to add</label>
-          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#748078]" />
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#748078]" aria-hidden="true" />
           <input id="trip-place-search" type="search" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search places or barangays…" className="min-h-12 w-full rounded-[18px] border border-[#D7DED4] bg-[#FFFDF7] py-3 pl-11 pr-4 text-sm font-semibold text-[#26372F] outline-none placeholder:text-[#98A29A] focus:border-[#2B6A4E] focus:ring-4 focus:ring-[#2B6A4E]/10" />
         </div>
         {isFull && <p className="mt-2 rounded-[16px] bg-[#FFF0D8] px-4 py-3 text-xs font-semibold leading-5 text-[#8A5726]">Four stops is the reliable mobile route limit. Remove one to add another.</p>}

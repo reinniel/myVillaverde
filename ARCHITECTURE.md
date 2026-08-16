@@ -6,7 +6,7 @@ myVillaverde is a client-side Vite and React application. The current architectu
 
 - `src/App.tsx` owns app-level state, Ko/Mo mode transitions, browser-history coordination, selected places, and screen orchestration.
 - `src/screens/` owns full page-level experiences: landing, local dashboard, visitor dashboard, map, and place details.
-- `src/components/` contains reusable interface behavior such as mode headers, category lists, saved collections, the ID-backed trip planner, galleries, and the accessible bottom sheet.
+- `src/components/` contains reusable interface behavior such as mode headers, category lists, saved collections, the ID-backed trip planner, galleries, the accessible bottom sheet, and the top-level render error boundary.
 - `src/hooks/usePlacesData.ts` owns the single live Places CSV request, online/offline transitions, reloads, and fallback selection.
 - `src/data/` contains static barangay/category configuration, the live-feed URL, and the generated offline Places snapshot.
 - `src/utils/` contains CSV normalization, place filtering, opening-hours parsing, distance calculations, map persistence, and place navigation helpers.
@@ -45,7 +45,8 @@ The published Google Sheet is authoritative. Run `npm run data:sync` after canon
 2. Keep the generated fallback synchronized with the live Places source.
 3. Run typecheck, production build, and preview checks before committing from AI Studio to GitHub.
 4. Confirm the GitHub checkpoint matches the verified AI Studio state.
-5. Complete visual and interaction verification of the Phase 6C trip-planning flow on the verified baseline.
+5. Complete visual and interaction verification of the Phase 6D empty, offline, loading, mobile, accessibility, persistence, and recovery states.
+6. Run `npm run verify` for the final release gate; it checks source data, TypeScript, and a forced production build.
 
 ## Deferred decisions
 
@@ -53,3 +54,4 @@ The published Google Sheet is authoritative. Run `npm run data:sync` after canon
 - Server-side rendering remains deferred because the product is a client-side local guide.
 - Automated component and end-to-end tests should be added as the Phase 6 interaction surface grows.
 - Broader design-system extraction should follow demonstrated reuse rather than happen preemptively.
+- The production build wrapper sets `NODE_ENV=production` inside Node so host-level development environment variables cannot silently produce an oversized release bundle.

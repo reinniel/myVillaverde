@@ -567,6 +567,7 @@ export default function App() {
             placeIds={tripPlaceIds}
             places={places}
             dataState={placesDataState}
+            isOnline={isOnline}
             onAddPlace={addTripPlace}
             onRemovePlace={removeTripPlace}
             onMovePlace={moveTripPlace}
