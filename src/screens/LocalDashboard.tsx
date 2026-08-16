@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRightLeft, Bookmark, ChevronRight, LocateFixed, Map as MapIcon, MapPin, Navigation } from 'lucide-react';
+import { ArrowRightLeft, Bookmark, ChevronRight, LocateFixed, Map as MapIcon, MapPin, Navigation, Route } from 'lucide-react';
 import type { Barangay, GuideCategory, ModalId, RecentlyViewedPlace } from '../types/app';
 import { LOCAL_CATEGORIES } from '../data/categories';
 import { CategoryList } from '../components/CategoryList';
@@ -77,8 +77,9 @@ export const LocalDashboard: React.FC<LocalDashboardProps> = ({
     </section>
 
     <section className="py-1">
-      <div className="grid grid-cols-3 gap-3 text-center">
+      <div className="grid grid-cols-2 gap-3 text-center">
         <QuickAction label="Explore Map" icon={MapIcon} color={activeBarangay.colors[0]} onClick={onOpenMap} />
+        <QuickAction label="Plan a Trip" icon={Route} color="#B5753D" onClick={() => onOpenModal('trip')} />
         <QuickAction label="Saved Places" icon={Bookmark} color={activeBarangay.colors[1]} onClick={() => onOpenModal('saved')} />
         <QuickAction label="Nearby" icon={Navigation} color={activeBarangay.colors[2]} onClick={() => onOpenModal('nearby')} />
       </div>

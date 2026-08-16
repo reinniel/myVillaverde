@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import {
-  ArrowRight, Compass, Heart, LocateFixed, Map, MapPin, RefreshCw, Sparkles,
+  ArrowRight, Compass, Heart, LocateFixed, Map, MapPin, RefreshCw, Route, Sparkles,
   Store, Utensils, Mountain, Building2, WifiOff,
 } from 'lucide-react';
 import type {
@@ -198,7 +198,7 @@ export const VisitorDashboard: React.FC<VisitorDashboardProps> = ({
         </div>
       )}
 
-      <section className="grid grid-cols-3 gap-2.5" aria-label="Visitor shortcuts">
+      <section className="grid grid-cols-2 gap-2.5" aria-label="Visitor shortcuts">
         <button
           type="button"
           onClick={onOpenMap}
@@ -208,6 +208,17 @@ export const VisitorDashboard: React.FC<VisitorDashboardProps> = ({
           <span className="mt-3 block text-xs font-extrabold text-[#26372F]">Map</span>
           <span className="mt-1 block text-[10px] font-medium leading-4 text-[#748078]">
             See all listings
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => onOpenModal('trip')}
+          className="rounded-[22px] border border-[#D7DED4] bg-[#FFFDF7] p-3 text-left shadow-xs transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#B5753D]/20"
+        >
+          <Route className="h-5 w-5 text-[#B5753D]" aria-hidden="true" />
+          <span className="mt-3 block text-xs font-extrabold text-[#26372F]">Plan</span>
+          <span className="mt-1 block text-[10px] font-medium leading-4 text-[#748078]">
+            Build a route
           </span>
         </button>
         <button

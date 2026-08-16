@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   AlertTriangle, ArrowLeft, Bookmark, Camera, Check, ChevronRight, Clock3, Database,
   ExternalLink, Globe2, ImageOff, Images, MapPin, Navigation, Phone, RefreshCw,
-  Share2, ShieldCheck,
+  Route, Share2, ShieldCheck,
 } from 'lucide-react';
 import type { Barangay, PlaceRecord, PlacesDataState, UserLocation } from '../types/app';
 import { CATEGORY_MARKER_COLORS } from '../data/categories';
@@ -19,11 +19,14 @@ export interface PlacePageProps {
   dataState: PlacesDataState;
   loadMessage: string;
   isSaved: boolean;
+  isInTrip: boolean;
+  isTripFull: boolean;
   userLocation: UserLocation | null;
   places: PlaceRecord[];
   onBack: () => void;
   onOpenPlace: (place: PlaceRecord) => void;
   onToggleSaved: (place: PlaceRecord) => void;
+  onToggleTrip: (place: PlaceRecord) => void;
 }
 
 interface PlaceSuggestion {
@@ -87,11 +90,14 @@ export const PlacePage: React.FC<PlacePageProps> = ({
   dataState,
   loadMessage,
   isSaved,
+  isInTrip,
+  isTripFull,
   userLocation,
   places,
   onBack,
   onOpenPlace,
   onToggleSaved,
+  onToggleTrip,
 }) => {
   const [shareState, setShareState] = useState<'idle' | 'copied'>('idle');
   const [coverPhotoIndex, setCoverPhotoIndex] = useState(0);
@@ -273,9 +279,10 @@ export const PlacePage: React.FC<PlacePageProps> = ({
         </div>
         <p className="sr-only" role="status" aria-live="polite">{shareState === 'copied' ? 'Place link copied' : ''}</p>
 
-        <section className="mt-5 grid grid-cols-3 gap-2.5" aria-label="Primary place actions">
+        <section className="mt-5 grid grid-cols-2 gap-2.5" aria-label="Primary place actions">
           <a href={getDirectionsUrl(place)} target="_blank" rel="noreferrer" className="flex min-h-[82px] flex-col items-center justify-center gap-2 rounded-[22px] bg-[#26372F] px-2 text-white shadow-sm transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#26372F]/25"><Navigation className="h-5 w-5" /><span className="text-[11px] font-extrabold">Directions</span></a>
           <button type="button" onClick={() => onToggleSaved(place)} className={`flex min-h-[82px] flex-col items-center justify-center gap-2 rounded-[22px] border px-2 transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20 ${isSaved ? 'border-[#2B6A4E] bg-[#DDEBDF] text-[#2B6A4E]' : 'border-[#D1DAD2] bg-[#FFFDF7] text-[#35463E]'}`} aria-pressed={isSaved}><Bookmark className={`h-5 w-5 ${isSaved ? 'fill-current' : ''}`} /><span className="text-[11px] font-extrabold">{isSaved ? 'Saved' : 'Save'}</span></button>
+          <button type="button" onClick={() => onToggleTrip(place)} disabled={isTripFull && !isInTrip} className={`flex min-h-[82px] flex-col items-center justify-center gap-2 rounded-[22px] border px-2 transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#B5753D]/20 disabled:cursor-not-allowed disabled:opacity-45 ${isInTrip ? 'border-[#B5753D] bg-[#F6E7D5] text-[#8A5726]' : 'border-[#D1DAD2] bg-[#FFFDF7] text-[#35463E]'}`} aria-pressed={isInTrip}><Route className="h-5 w-5" /><span className="text-[11px] font-extrabold">{isInTrip ? 'In trip' : isTripFull ? 'Trip full' : 'Add to trip'}</span></button>
           <button type="button" onClick={() => void sharePlace()} className="flex min-h-[82px] flex-col items-center justify-center gap-2 rounded-[22px] border border-[#D1DAD2] bg-[#FFFDF7] px-2 text-[#35463E] transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20"><Share2 className="h-5 w-5" /><span className="text-[11px] font-extrabold">{shareState === 'copied' ? 'Copied' : 'Share'}</span></button>
         </section>
 

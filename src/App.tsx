@@ -10,6 +10,7 @@ import { MODE_ORDER, VILLAVERDE_BARANGAYS } from './data/barangays';
 import { CATEGORY_MARKER_COLORS } from './data/categories';
 import {
   RECENTLY_VIEWED_STORAGE_KEY, SAVED_PLACES_STORAGE_KEY, SELECTED_BARANGAY_STORAGE_KEY,
+  TRIP_PLAN_STORAGE_KEY,
 } from './data/config';
 import { usePlacesData } from './hooks/usePlacesData';
 import { ModeHeader } from './components/ModeHeader';
@@ -18,6 +19,7 @@ import { BarangayArtwork } from './components/BarangayArtwork';
 import { EmptyState } from './components/EmptyState';
 import { SavedPlacesSheet } from './components/SavedPlacesSheet';
 import { BarangayDetailSheet } from './components/BarangayDetailSheet';
+import { TripPlannerSheet } from './components/TripPlannerSheet';
 import { WelcomeLanding } from './screens/WelcomeLanding';
 import { LocalDashboard } from './screens/LocalDashboard';
 import { VisitorDashboard } from './screens/VisitorDashboard';
@@ -29,7 +31,7 @@ import {
   removePlacePageFromUrl, removeVisitorBarangayFromUrl,
 } from './utils/placeNavigation';
 import {
-  formatDistance, getDirectionsUrl, getDistanceMeters, placeMatchesGuideCategory,
+  formatDistance, getDirectionsUrl, getDistanceMeters, MAX_TRIP_STOPS, placeMatchesGuideCategory,
 } from './utils/places';
 import './styles/app.css';
 
@@ -37,6 +39,20 @@ const getValidBarangayId = (barangayId: string | null | undefined) =>
   barangayId && VILLAVERDE_BARANGAYS.some((barangay) => barangay.id === barangayId)
     ? barangayId
     : null;
+
+const readTripPlaceIds = () => {
+  try {
+    const raw = localStorage.getItem(TRIP_PLAN_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed)
+      ? Array.from(new Set(parsed.filter((value): value is string => typeof value === 'string'))).slice(0, MAX_TRIP_STOPS)
+      : [];
+  } catch (error) {
+    console.error('Failed to read trip plan from localStorage', error);
+    return [];
+  }
+};
 
 export default function App() {
   const [mode, setMode] = useState<AppMode>(() => {
@@ -86,6 +102,7 @@ export default function App() {
       return [];
     }
   });
+  const [tripPlaceIds, setTripPlaceIds] = useState<string[]>(readTripPlaceIds);
 
   const [selectedBarangay, setSelectedBarangay] = useState<string>(() => {
     try {
@@ -282,6 +299,57 @@ export default function App() {
     });
   };
 
+  const persistTripPlaceIds = (next: string[]) => {
+    try {
+      localStorage.setItem(TRIP_PLAN_STORAGE_KEY, JSON.stringify(next));
+    } catch (error) {
+      console.error('Failed to save trip plan to localStorage', error);
+    }
+  };
+
+  const addTripPlace = (place: PlaceRecord) => {
+    setTripPlaceIds((current) => {
+      if (current.includes(place.id) || current.length >= MAX_TRIP_STOPS) return current;
+      const next = [...current, place.id];
+      persistTripPlaceIds(next);
+      return next;
+    });
+  };
+
+  const removeTripPlace = (placeId: string) => {
+    setTripPlaceIds((current) => {
+      const next = current.filter((id) => id !== placeId);
+      persistTripPlaceIds(next);
+      return next;
+    });
+  };
+
+  const toggleTripPlace = (place: PlaceRecord) => {
+    if (tripPlaceIds.includes(place.id)) removeTripPlace(place.id);
+    else addTripPlace(place);
+  };
+
+  const moveTripPlace = (placeId: string, direction: -1 | 1) => {
+    setTripPlaceIds((current) => {
+      const currentIndex = current.indexOf(placeId);
+      const nextIndex = currentIndex + direction;
+      if (currentIndex < 0 || nextIndex < 0 || nextIndex >= current.length) return current;
+      const next = [...current];
+      [next[currentIndex], next[nextIndex]] = [next[nextIndex], next[currentIndex]];
+      persistTripPlaceIds(next);
+      return next;
+    });
+  };
+
+  const clearTrip = () => {
+    setTripPlaceIds([]);
+    try {
+      localStorage.removeItem(TRIP_PLAN_STORAGE_KEY);
+    } catch (error) {
+      console.error('Failed to clear trip plan from localStorage', error);
+    }
+  };
+
   const openCategory = (scope: CategoryScope, category: GuideCategory) => {
     setSelectedCategory({ scope, category });
     setActiveModal('category');
@@ -352,11 +420,14 @@ export default function App() {
             dataState={placesDataState}
             loadMessage={placesLoadMessage}
             isSaved={Boolean(placePage && savedPlaces.some((savedPlace) => savedPlace.id === placePage.id))}
+            isInTrip={Boolean(placePage && tripPlaceIds.includes(placePage.id))}
+            isTripFull={tripPlaceIds.length >= MAX_TRIP_STOPS}
             userLocation={userLocation}
             places={places}
             onBack={closePlacePage}
             onOpenPlace={openPlacePage}
             onToggleSaved={handleToggleSavedPlace}
+            onToggleTrip={toggleTripPlace}
           />
         ) : mapScope ? (
           <MapScreen
@@ -485,6 +556,25 @@ export default function App() {
 />
   </BottomSheet>
 )}
+
+      {activeModal === 'trip' && (
+        <BottomSheet
+          title="Plan a trip"
+          subtitle="Build an ordered route from real places in the shared guide."
+          onClose={() => setActiveModal(null)}
+        >
+          <TripPlannerSheet
+            placeIds={tripPlaceIds}
+            places={places}
+            dataState={placesDataState}
+            onAddPlace={addTripPlace}
+            onRemovePlace={removeTripPlace}
+            onMovePlace={moveTripPlace}
+            onClear={clearTrip}
+            onOpenPlace={openPlacePage}
+          />
+        </BottomSheet>
+      )}
 
       {activeModal === 'nearby' && (
         <BottomSheet title="Nearby" subtitle={mode === 'mo' ? 'Find useful stops close to you.' : `Discover places near ${activeBarangay.name}.`} onClose={() => setActiveModal(null)}>

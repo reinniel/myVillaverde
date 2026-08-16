@@ -2,7 +2,7 @@ import type React from 'react';
 
 export type AppMode = 'home' | 'ko' | 'mo';
 export type TransitionDirection = 'left' | 'right' | 'neutral';
-export type ModalId = 'barangay' | 'visitor-barangay' | 'saved' | 'nearby' | 'category' | null;
+export type ModalId = 'barangay' | 'visitor-barangay' | 'saved' | 'trip' | 'nearby' | 'category' | null;
 export type CategoryScope = 'local' | 'visitor';
 export type MapCategoryId = 'all' | 'food' | 'services' | 'transport' | 'visit' | 'government';
 export type MapPanelView = 'categories' | 'layers' | 'nearby' | 'location';

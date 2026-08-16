@@ -191,6 +191,22 @@ export const placeMatchesGuideCategory = (place: PlaceRecord, selection: Selecte
 export const getDirectionsUrl = (place: PlaceRecord) =>
   `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${place.latitude},${place.longitude}`)}`;
 
+export const MAX_TRIP_STOPS = 4;
+
+export const getTripDirectionsUrl = (places: PlaceRecord[]) => {
+  const stops = places.slice(0, MAX_TRIP_STOPS);
+  if (stops.length === 0) return '';
+  if (stops.length === 1) return getDirectionsUrl(stops[0]);
+
+  const destination = stops[stops.length - 1];
+  const waypoints = stops
+    .slice(0, -1)
+    .map((place) => `${place.latitude},${place.longitude}`)
+    .join('|');
+
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${destination.latitude},${destination.longitude}`)}&waypoints=${encodeURIComponent(waypoints)}&travelmode=driving`;
+};
+
 
 export const toRadians = (value: number) => value * (Math.PI / 180);
 

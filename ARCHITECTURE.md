@@ -1,12 +1,12 @@
 # Architecture
 
-myVillaverde is a client-side Vite and React application. The current architecture grew out of the Phase 3R extraction refactor and now supports the completed map, place-page, nearby, saved, and Phase 6A visitor-discovery work.
+myVillaverde is a client-side Vite and React application. The current architecture grew out of the Phase 3R extraction refactor and now supports the completed map, place-page, nearby, saved, Phase 6A visitor discovery, Phase 6B barangay discovery, and the Phase 6C trip-planning MVP.
 
 ## Application boundaries
 
 - `src/App.tsx` owns app-level state, Ko/Mo mode transitions, browser-history coordination, selected places, and screen orchestration.
 - `src/screens/` owns full page-level experiences: landing, local dashboard, visitor dashboard, map, and place details.
-- `src/components/` contains reusable interface behavior such as mode headers, category lists, saved collections, galleries, and the accessible bottom sheet.
+- `src/components/` contains reusable interface behavior such as mode headers, category lists, saved collections, the ID-backed trip planner, galleries, and the accessible bottom sheet.
 - `src/hooks/usePlacesData.ts` owns the single live Places CSV request, online/offline transitions, reloads, and fallback selection.
 - `src/data/` contains static barangay/category configuration, the live-feed URL, and the generated offline Places snapshot.
 - `src/utils/` contains CSV normalization, place filtering, opening-hours parsing, distance calculations, map persistence, and place navigation helpers.
@@ -26,8 +26,9 @@ The published Google Sheet is authoritative. Run `npm run data:sync` after canon
 
 - The app intentionally uses browser history without React Router.
 - Place-page, visitor-barangay, and focused-map URLs use query parameters coordinated by `placeNavigation.ts` and `App.tsx`, so Back/Forward restores the correct surface without React Router.
-- Selected barangay, map view, favorites, Want to Visit, and recently viewed data are stored locally under versioned keys.
+- Selected barangay, map view, favorites, Want to Visit, recently viewed data, and ordered trip place IDs are stored locally under versioned keys.
 - Saved-place migrations preserve older ID-only entries until their live records can be restored.
+- Trip plans never copy place records: each stop resolves by ID against the current live or fallback dataset, so the Places sheet remains authoritative.
 
 ## Data integrity rules
 
@@ -44,11 +45,11 @@ The published Google Sheet is authoritative. Run `npm run data:sync` after canon
 2. Keep the generated fallback synchronized with the live Places source.
 3. Run typecheck, production build, and preview checks before committing from AI Studio to GitHub.
 4. Confirm the GitHub checkpoint matches the verified AI Studio state.
-5. Complete and verify the Phase 6B.2 barangay detail flow on the verified baseline.
+5. Complete visual and interaction verification of the Phase 6C trip-planning flow on the verified baseline.
 
 ## Deferred decisions
 
 - React Router remains deferred while the current history behavior is stable.
 - Server-side rendering remains deferred because the product is a client-side local guide.
-- Automated component and end-to-end tests should be added as the Phase 6B interaction surface grows.
+- Automated component and end-to-end tests should be added as the Phase 6 interaction surface grows.
 - Broader design-system extraction should follow demonstrated reuse rather than happen preemptively.

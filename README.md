@@ -7,7 +7,8 @@ myVillaverde is a mobile-first local guide for Villaverde, Nueva Vizcaya. It com
 - Phases 1–5 are complete.
 - Phase 6A, the visitor discovery home, is complete.
 - The Phase 6 recovery baseline and Phase 6B.1 barangay cards are complete.
-- Phase 6B.2, the barangay detail flow, is in progress.
+- Phase 6B.2, the barangay detail flow, is complete.
+- Phase 6C, the ID-backed visitor trip planner and multi-stop route flow, is in progress.
 
 ## Working copy and checkpoints
 
@@ -63,5 +64,6 @@ The sync command validates required columns, IDs, categories, and coordinates be
 - Place photos are shown only when a usable URL and approved permission are both present.
 - Ratings, popularity, and tourism claims are not invented from missing data.
 - Barangay cards and detail sheets derive counts, categories, and place links from the current database, including honest empty states.
+- Trip plans store only ordered place IDs, resolve every stop against the current database, prevent duplicates, and open routes through Google Maps.
 
 See `ARCHITECTURE.md` for module boundaries and data flow.
