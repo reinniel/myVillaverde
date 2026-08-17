@@ -1,4 +1,4 @@
-import { BedDouble, Building2, BusFront, MapPin, Mountain, Route, ShoppingBag, Store, Utensils } from 'lucide-react';
+import { BedDouble, Building2, BusFront, Church, MapPin, Mountain, Route, ShoppingBag, Store, Utensils } from 'lucide-react';
 import type { GuideCategory, MapCategory, MapCategoryId } from '../types/app';
 
 export const LOCAL_CATEGORIES: GuideCategory[] = [
@@ -46,6 +46,15 @@ export const LOCAL_CATEGORIES: GuideCategory[] = [
     emptyMessage: 'Schools, government offices, emergency services, and public facilities will appear here.',
     icon: Building2,
     tone: 'border-[#C8DBD1] bg-[#EEF7F1] text-[#2B6A4E]',
+  },
+  {
+    id: 'worship',
+    title: 'Religious & Worship Places',
+    description: 'Chapels, churches, and other places of worship',
+    emptyTitle: 'No worship listings yet',
+    emptyMessage: 'Verified chapels, churches, and other places of worship will appear here.',
+    icon: Church,
+    tone: 'border-[#DDD2C2] bg-[#F8F3EA] text-[#795C34]',
   },
 ];
 
@@ -104,6 +113,7 @@ export const MAP_CATEGORIES: MapCategory[] = [
   { id: 'transport', label: 'Transport', icon: BusFront },
   { id: 'visit', label: 'Places to Visit', icon: Mountain },
   { id: 'government', label: 'Government', icon: Building2 },
+  { id: 'worship', label: 'Religious & Worship', icon: Church },
 ];
 
 export const CATEGORY_MARKER_COLORS: Record<Exclude<MapCategoryId, 'all'>, string> = {
@@ -112,4 +122,5 @@ export const CATEGORY_MARKER_COLORS: Record<Exclude<MapCategoryId, 'all'>, strin
   transport: '#276B60',
   visit: '#326B3D',
   government: '#2B6A4E',
+  worship: '#795C34',
 };
