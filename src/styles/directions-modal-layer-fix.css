@@ -1,0 +1,27 @@
+/*
+ * Native Directions modal stacking correction.
+ *
+ * Leaflet uses internal pane z-index values in the hundreds. The external
+ * navigation chooser is rendered as a sibling of the map, so its original
+ * z-index (80) could be painted underneath Leaflet panes. That made the top
+ * half of the modal appear clipped exactly where it overlapped the map.
+ */
+
+main[aria-label^='Directions to '] > section[aria-label='Route map'] {
+  isolation: isolate;
+  z-index: 0;
+}
+
+[role='presentation']:has(> [role='dialog'][aria-labelledby='external-navigation-title']) {
+  z-index: 2000 !important;
+}
+
+/* The underlying Directions content should not advertise a second scroll
+ * surface while the modal is open. Keep the content usable once it closes. */
+main[aria-label^='Directions to ']:has([role='dialog'][aria-labelledby='external-navigation-title']) > section:not([aria-label='Route map']) {
+  scrollbar-width: none;
+}
+
+main[aria-label^='Directions to ']:has([role='dialog'][aria-labelledby='external-navigation-title']) > section:not([aria-label='Route map'])::-webkit-scrollbar {
+  display: none;
+}
