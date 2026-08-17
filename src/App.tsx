@@ -9,8 +9,8 @@ import type {
 import { MODE_ORDER, VILLAVERDE_BARANGAYS } from './data/barangays';
 import { CATEGORY_MARKER_COLORS, LOCAL_CATEGORIES, VISITOR_CATEGORIES } from './data/categories';
 import {
-  RECENTLY_VIEWED_STORAGE_KEY, SAVED_PLACES_STORAGE_KEY, SELECTED_BARANGAY_STORAGE_KEY,
-  TRIP_PLAN_STORAGE_KEY,
+  PREFERRED_MODE_STORAGE_KEY, RECENTLY_VIEWED_STORAGE_KEY, SAVED_PLACES_STORAGE_KEY,
+  SELECTED_BARANGAY_STORAGE_KEY, TRIP_PLAN_STORAGE_KEY,
 } from './data/config';
 import { usePlacesData } from './hooks/usePlacesData';
 import { ModeHeader } from './components/ModeHeader';
@@ -80,6 +80,12 @@ export default function App() {
     const initialMapNavigation = readMapNavigationFromUrl();
     if (initialMapNavigation?.scope === 'local') return 'ko';
     if (initialMapNavigation?.scope === 'visitor' || getValidBarangayId(readVisitorBarangayIdFromUrl())) return 'mo';
+    try {
+      const preferredMode = localStorage.getItem(PREFERRED_MODE_STORAGE_KEY);
+      if (preferredMode === 'ko' || preferredMode === 'mo') return preferredMode;
+    } catch (error) {
+      console.error('Failed to read preferred myVillaverde mode from localStorage', error);
+    }
     return 'home';
   });
   const [transitionDirection, setTransitionDirection] = useState<TransitionDirection>('neutral');
@@ -362,6 +368,13 @@ export default function App() {
     setTransitionDirection(MODE_ORDER[nextMode] < MODE_ORDER[mode] ? 'left' : 'right');
     setActiveModal(null);
     setMode(nextMode);
+    if (nextMode === 'ko' || nextMode === 'mo') {
+      try {
+        localStorage.setItem(PREFERRED_MODE_STORAGE_KEY, nextMode);
+      } catch (error) {
+        console.error('Failed to save preferred myVillaverde mode to localStorage', error);
+      }
+    }
     window.scrollTo({ top: 0, behavior: 'auto' });
   };
 
