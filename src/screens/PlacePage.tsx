@@ -189,33 +189,32 @@ export const PlacePage: React.FC<PlacePageProps> = ({
     await copyPlaceLink(url);
   };
 
-const showPlaceOnMap = () => {
-  if (!place) return;
-  const mapScopeFromUrl = readMapNavigationFromUrl()?.scope;
-  const categoryScope = readCategoryModalStateFromHistory(window.history.state)?.scope;
-  const storedMapScope = window.history.state && typeof window.history.state === 'object'
-    ? (window.history.state as Record<string, unknown>).mapScope
-    : null;
-  const scope = mapScopeFromUrl
-    ?? categoryScope
-    ?? (storedMapScope === 'local' || storedMapScope === 'visitor' ? storedMapScope : null)
-    ?? 'visitor';
-  const mapState = {
-    panelView: 'categories' as const,
-    categoryId: 'all' as const,
-    selectedPlaceId: place.id,
+  const showPlaceOnMap = () => {
+    if (!place) return;
+    const mapScopeFromUrl = readMapNavigationFromUrl()?.scope;
+    const categoryScope = readCategoryModalStateFromHistory(window.history.state)?.scope;
+    const storedMapScope = window.history.state && typeof window.history.state === 'object'
+      ? (window.history.state as Record<string, unknown>).mapScope
+      : null;
+    const scope = mapScopeFromUrl
+      ?? categoryScope
+      ?? (storedMapScope === 'local' || storedMapScope === 'visitor' ? storedMapScope : null)
+      ?? 'visitor';
+    const mapState = {
+      panelView: 'categories' as const,
+      categoryId: 'all' as const,
+      selectedPlaceId: place.id,
+    };
+    const nextHistoryState = buildMapReturnHistoryState({
+      ...window.history.state,
+      myVillaverdeMapEntry: true,
+      mapScope: scope,
+      barangayId: null,
+    }, mapState);
+
+    window.history.pushState(nextHistoryState, '', buildMapUrl(scope));
+    window.dispatchEvent(new PopStateEvent('popstate', { state: nextHistoryState }));
   };
-  const nextHistoryState = buildMapReturnHistoryState({
-    ...window.history.state,
-    myVillaverdeMapEntry: true,
-    mapScope: scope,
-    barangayId: null,
-  }, mapState);
-
-  window.history.pushState(nextHistoryState, '', buildMapUrl(scope));
-  window.dispatchEvent(new PopStateEvent('popstate', { state: nextHistoryState }));
-};
-
 
   if (!place) {
     const isLoading = dataState === 'loading';
