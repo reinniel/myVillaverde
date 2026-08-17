@@ -7,6 +7,7 @@ export const getPlaceCategoryId = (category: string): Exclude<MapCategoryId, 'al
   if (normalized === 'transport') return 'transport';
   if (normalized === 'places to visit') return 'visit';
   if (normalized === 'government & public services') return 'government';
+  if (normalized === 'religious & worship places') return 'worship';
   return null;
 };
 
@@ -163,7 +164,7 @@ export const placeMatchesGuideCategory = (place: PlaceRecord, selection: Selecte
   if (selection.scope === 'local' && place.barangay !== activeBarangayName) return false;
 
   const categoryId = selection.category.id;
-  if (categoryId === 'food' || categoryId === 'services' || categoryId === 'transport' || categoryId === 'visit' || categoryId === 'government') {
+  if (categoryId === 'food' || categoryId === 'services' || categoryId === 'transport' || categoryId === 'visit' || categoryId === 'government' || categoryId === 'worship') {
     return place.categoryId === categoryId;
   }
 
