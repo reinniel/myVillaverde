@@ -6,6 +6,7 @@ export const BARANGAY_CATEGORY_LABELS: Record<Exclude<MapCategoryId, 'all'>, str
   transport: 'Transport',
   visit: 'Places to visit',
   government: 'Public services',
+  worship: 'Religious & worship places',
 };
 
 export const BARANGAY_CATEGORY_ORDER: Exclude<MapCategoryId, 'all'>[] = [
@@ -14,6 +15,7 @@ export const BARANGAY_CATEGORY_ORDER: Exclude<MapCategoryId, 'all'>[] = [
   'transport',
   'visit',
   'government',
+  'worship',
 ];
 
 export const getBarangayPlaces = (places: PlaceRecord[], barangayName: string) =>
