@@ -82,6 +82,7 @@ const categoryIds = new Map([
   ['transport', 'transport'],
   ['places to visit', 'visit'],
   ['government & public services', 'government'],
+  ['religious & worship places', 'worship'],
 ]);
 
 const isSupportedPhotoUrl = (value) => {
