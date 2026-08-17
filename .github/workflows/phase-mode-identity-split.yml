@@ -25,66 +25,63 @@ jobs:
 
           app = Path('src/App.tsx')
           text = app.read_text()
-
-          old_import = """  RECENTLY_VIEWED_STORAGE_KEY, SAVED_PLACES_STORAGE_KEY, SELECTED_BARANGAY_STORAGE_KEY,
-  TRIP_PLAN_STORAGE_KEY,
-"""
-          new_import = """  PREFERRED_MODE_STORAGE_KEY, RECENTLY_VIEWED_STORAGE_KEY, SAVED_PLACES_STORAGE_KEY,
-  SELECTED_BARANGAY_STORAGE_KEY, TRIP_PLAN_STORAGE_KEY,
-"""
+          old_import = "  RECENTLY_VIEWED_STORAGE_KEY, SAVED_PLACES_STORAGE_KEY, SELECTED_BARANGAY_STORAGE_KEY,\n  TRIP_PLAN_STORAGE_KEY,\n"
+          new_import = "  PREFERRED_MODE_STORAGE_KEY, RECENTLY_VIEWED_STORAGE_KEY, SAVED_PLACES_STORAGE_KEY,\n  SELECTED_BARANGAY_STORAGE_KEY, TRIP_PLAN_STORAGE_KEY,\n"
           if old_import not in text:
               raise SystemExit('App config import target not found')
           text = text.replace(old_import, new_import, 1)
 
-          old_mode = """  const [mode, setMode] = useState<AppMode>(() => {
-    const initialMapNavigation = readMapNavigationFromUrl();
-    if (initialMapNavigation?.scope === 'local') return 'ko';
-    if (initialMapNavigation?.scope === 'visitor' || getValidBarangayId(readVisitorBarangayIdFromUrl())) return 'mo';
-    return 'home';
-  });
-"""
-          new_mode = """  const [mode, setMode] = useState<AppMode>(() => {
-    const initialMapNavigation = readMapNavigationFromUrl();
-    if (initialMapNavigation?.scope === 'local') return 'ko';
-    if (initialMapNavigation?.scope === 'visitor' || getValidBarangayId(readVisitorBarangayIdFromUrl())) return 'mo';
-    try {
-      const preferredMode = localStorage.getItem(PREFERRED_MODE_STORAGE_KEY);
-      if (preferredMode === 'ko' || preferredMode === 'mo') return preferredMode;
-    } catch (error) {
-      console.error('Failed to read preferred myVillaverde mode from localStorage', error);
-    }
-    return 'home';
-  });
-"""
+          old_mode = (
+              "  const [mode, setMode] = useState<AppMode>(() => {\n"
+              "    const initialMapNavigation = readMapNavigationFromUrl();\n"
+              "    if (initialMapNavigation?.scope === 'local') return 'ko';\n"
+              "    if (initialMapNavigation?.scope === 'visitor' || getValidBarangayId(readVisitorBarangayIdFromUrl())) return 'mo';\n"
+              "    return 'home';\n"
+              "  });\n"
+          )
+          new_mode = (
+              "  const [mode, setMode] = useState<AppMode>(() => {\n"
+              "    const initialMapNavigation = readMapNavigationFromUrl();\n"
+              "    if (initialMapNavigation?.scope === 'local') return 'ko';\n"
+              "    if (initialMapNavigation?.scope === 'visitor' || getValidBarangayId(readVisitorBarangayIdFromUrl())) return 'mo';\n"
+              "    try {\n"
+              "      const preferredMode = localStorage.getItem(PREFERRED_MODE_STORAGE_KEY);\n"
+              "      if (preferredMode === 'ko' || preferredMode === 'mo') return preferredMode;\n"
+              "    } catch (error) {\n"
+              "      console.error('Failed to read preferred myVillaverde mode from localStorage', error);\n"
+              "    }\n"
+              "    return 'home';\n"
+              "  });\n"
+          )
           if old_mode not in text:
               raise SystemExit('App mode initializer target not found')
           text = text.replace(old_mode, new_mode, 1)
 
-          old_change = """  const handleModeChange = (nextMode: AppMode) => {
-    if (nextMode === mode) return;
-
-    setTransitionDirection(MODE_ORDER[nextMode] < MODE_ORDER[mode] ? 'left' : 'right');
-    setActiveModal(null);
-    setMode(nextMode);
-    window.scrollTo({ top: 0, behavior: 'auto' });
-  };
-"""
-          new_change = """  const handleModeChange = (nextMode: AppMode) => {
-    if (nextMode === mode) return;
-
-    setTransitionDirection(MODE_ORDER[nextMode] < MODE_ORDER[mode] ? 'left' : 'right');
-    setActiveModal(null);
-    setMode(nextMode);
-    if (nextMode === 'ko' || nextMode === 'mo') {
-      try {
-        localStorage.setItem(PREFERRED_MODE_STORAGE_KEY, nextMode);
-      } catch (error) {
-        console.error('Failed to save preferred myVillaverde mode to localStorage', error);
-      }
-    }
-    window.scrollTo({ top: 0, behavior: 'auto' });
-  };
-"""
+          old_change = (
+              "  const handleModeChange = (nextMode: AppMode) => {\n"
+              "    if (nextMode === mode) return;\n\n"
+              "    setTransitionDirection(MODE_ORDER[nextMode] < MODE_ORDER[mode] ? 'left' : 'right');\n"
+              "    setActiveModal(null);\n"
+              "    setMode(nextMode);\n"
+              "    window.scrollTo({ top: 0, behavior: 'auto' });\n"
+              "  };\n"
+          )
+          new_change = (
+              "  const handleModeChange = (nextMode: AppMode) => {\n"
+              "    if (nextMode === mode) return;\n\n"
+              "    setTransitionDirection(MODE_ORDER[nextMode] < MODE_ORDER[mode] ? 'left' : 'right');\n"
+              "    setActiveModal(null);\n"
+              "    setMode(nextMode);\n"
+              "    if (nextMode === 'ko' || nextMode === 'mo') {\n"
+              "      try {\n"
+              "        localStorage.setItem(PREFERRED_MODE_STORAGE_KEY, nextMode);\n"
+              "      } catch (error) {\n"
+              "        console.error('Failed to save preferred myVillaverde mode to localStorage', error);\n"
+              "      }\n"
+              "    }\n"
+              "    window.scrollTo({ top: 0, behavior: 'auto' });\n"
+              "  };\n"
+          )
           if old_change not in text:
               raise SystemExit('App mode-change target not found')
           text = text.replace(old_change, new_change, 1)
@@ -92,66 +89,59 @@ jobs:
 
           visitor = Path('src/screens/VisitorDashboard.tsx')
           text = visitor.read_text()
-          replacements = {
-              'Visitor discovery guide': 'Visitor & tourist guide',
-              'Find a real place for your next stop.': 'Explore Villaverde like a visitor.',
-              'Browse Villaverde using the same live place listings, map, directions, and saved collections.': 'Discover places to visit, food to try, barangays to explore, and build a trip from the live guide.',
-              'Explore the map': 'Explore Villaverde',
-              'Browse by visitor need': 'Discover as a visitor',
-          }
-          for old, new in replacements.items():
+          replacements = [
+              ('Visitor discovery guide', 'Visitor & tourist guide'),
+              ('Find a real place for your next stop.', 'Explore Villaverde like a visitor.'),
+              ('Browse Villaverde using the same live place listings, map, directions, and saved collections.', 'Discover places to visit, food to try, barangays to explore, and build a trip from the live guide.'),
+              ('Explore the map', 'Explore Villaverde'),
+              ('Browse by visitor need', 'Discover as a visitor'),
+          ]
+          for old, new in replacements:
               if old not in text:
                   raise SystemExit(f'Visitor copy target not found: {old}')
               text = text.replace(old, new, 1)
 
           old_grid = '      <section className="grid grid-cols-2 gap-2.5" aria-label="Visitor shortcuts">'
-          new_grid = '      <section className="grid grid-cols-3 gap-2.5" aria-label="Visitor shortcuts">'
           if old_grid not in text:
               raise SystemExit('Visitor shortcut grid target not found')
-          text = text.replace(old_grid, new_grid, 1)
+          text = text.replace(old_grid, '      <section className="grid grid-cols-3 gap-2.5" aria-label="Visitor shortcuts">', 1)
 
-          plan_block = """        <button
-          type="button"
-          onClick={() => onOpenModal('trip')}
-          className="rounded-[22px] border border-[#D7DED4] bg-[#FFFDF7] p-3 text-left shadow-xs transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#B5753D]/20"
-        >
-          <Route className="h-5 w-5 text-[#B5753D]" aria-hidden="true" />
-          <span className="mt-3 block text-xs font-extrabold text-[#26372F]">Plan</span>
-          <span className="mt-1 block text-[10px] font-medium leading-4 text-[#748078]">
-            Build a route
-          </span>
-        </button>
-"""
-          if plan_block not in text:
+          plan_start_marker = "        <button\n          type=\"button\"\n          onClick={() => onOpenModal('trip')}"
+          plan_start = text.find(plan_start_marker)
+          if plan_start < 0:
               raise SystemExit('Visitor plan shortcut target not found')
-          text = text.replace(plan_block, '', 1)
+          plan_end = text.find('        </button>\n', plan_start)
+          if plan_end < 0:
+              raise SystemExit('Visitor plan shortcut end not found')
+          plan_end += len('        </button>\n')
+          text = text[:plan_start] + text[plan_end:]
 
           marker = '      <BarangayDiscoverySection places={places} dataState={dataState} onOpenBarangay={onOpenBarangay} />'
-          trip_card = """      <section aria-labelledby="visitor-trip-title">
-        <button
-          type="button"
-          onClick={() => onOpenModal('trip')}
-          className="group relative w-full overflow-hidden rounded-[28px] bg-[linear-gradient(135deg,#6C4F72_0%,#8E5E78_50%,#B5753D_100%)] p-5 text-left text-white shadow-[0_10px_26px_rgba(103,73,96,0.20)] transition active:scale-[0.99] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#76527D]/25"
-        >
-          <span className="pointer-events-none absolute -right-8 -top-12 h-32 w-32 rounded-full bg-white/10" />
-          <span className="relative flex items-center justify-between gap-4">
-            <span className="min-w-0">
-              <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-white/75">VillaverdeMo trip tool</span>
-              <span id="visitor-trip-title" className="mt-1 block font-serif-header text-[22px] font-bold">Plan your visit</span>
-              <span className="mt-1.5 block max-w-[285px] text-xs font-medium leading-5 text-white/80">Build an ordered trip from real places, then open each stop on the map or in Directions.</span>
-            </span>
-            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-white/20 bg-white/15 backdrop-blur-sm transition-transform group-hover:translate-x-0.5">
-              <Route className="h-6 w-6" aria-hidden="true" />
-            </span>
-          </span>
-        </button>
-      </section>
-
-      <BarangayDiscoverySection places={places} dataState={dataState} onOpenBarangay={onOpenBarangay} />"""
+          trip_card = (
+              "      <section aria-labelledby=\"visitor-trip-title\">\n"
+              "        <button\n"
+              "          type=\"button\"\n"
+              "          onClick={() => onOpenModal('trip')}\n"
+              "          className=\"group relative w-full overflow-hidden rounded-[28px] bg-[linear-gradient(135deg,#6C4F72_0%,#8E5E78_50%,#B5753D_100%)] p-5 text-left text-white shadow-[0_10px_26px_rgba(103,73,96,0.20)] transition active:scale-[0.99] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#76527D]/25\"\n"
+              "        >\n"
+              "          <span className=\"pointer-events-none absolute -right-8 -top-12 h-32 w-32 rounded-full bg-white/10\" />\n"
+              "          <span className=\"relative flex items-center justify-between gap-4\">\n"
+              "            <span className=\"min-w-0\">\n"
+              "              <span className=\"text-[10px] font-extrabold uppercase tracking-[0.16em] text-white/75\">VillaverdeMo trip tool</span>\n"
+              "              <span id=\"visitor-trip-title\" className=\"mt-1 block font-serif-header text-[22px] font-bold\">Plan your visit</span>\n"
+              "              <span className=\"mt-1.5 block max-w-[285px] text-xs font-medium leading-5 text-white/80\">Build an ordered trip from real places, then open each stop on the map or in Directions.</span>\n"
+              "            </span>\n"
+              "            <span className=\"grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-white/20 bg-white/15 backdrop-blur-sm transition-transform group-hover:translate-x-0.5\">\n"
+              "              <Route className=\"h-6 w-6\" aria-hidden=\"true\" />\n"
+              "            </span>\n"
+              "          </span>\n"
+              "        </button>\n"
+              "      </section>\n\n"
+              "      <BarangayDiscoverySection places={places} dataState={dataState} onOpenBarangay={onOpenBarangay} />"
+          )
           if marker not in text:
               raise SystemExit('Visitor barangay section marker not found')
-          text = text.replace(marker, trip_card, 1)
-          visitor.write_text(text)
+          visitor.write_text(text.replace(marker, trip_card, 1))
 
       - name: Verify
         run: npm ci && npm run verify
