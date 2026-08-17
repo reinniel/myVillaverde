@@ -33,7 +33,7 @@
 - **VillaverdeKo** gives residents barangay-aware discovery, nearby places, saved collections, and direct map access.
 - **VillaverdeMo** gives visitors curated discovery, barangay guides, place pages, saved collections, and a four-stop trip planner.
 - **Explore Map** combines search, category filters, persistent map state, focused barangay views, and location-aware nearby results.
-- **Live place data** comes from the published Villaverde Places database, with a generated 32-place fallback when the live feed is unavailable.
+- **Live place data** comes from the published Villaverde Places database, with a generated 36-place fallback when the live feed is unavailable.
 - **Resilient states** cover loading, offline use, reconnecting, unavailable records, reduced motion, browser zoom, and render recovery.
 
 ## Product principles
