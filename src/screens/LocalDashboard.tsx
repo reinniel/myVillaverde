@@ -42,19 +42,19 @@ export const LocalDashboard: React.FC<LocalDashboardProps> = ({
           style={{
             backgroundImage: `linear-gradient(135deg, ${activeBarangay.colors[0]} 0%, ${activeBarangay.colors[1]} 52%, ${activeBarangay.colors[2]} 100%)`,
           }}
-          aria-label={`Your barangay is ${activeBarangay.name}. Tap to change barangay.`}
+          aria-label={`Current barangay is ${activeBarangay.name}. Tap to change barangay.`}
         >
           <BarangayArtwork barangay={activeBarangay} />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-white/5" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-white/5" />
 
-          <div className="relative z-10 flex min-h-[204px] flex-col justify-between p-5">
+          <div className="relative z-10 flex min-h-[176px] flex-col justify-between p-5">
             <div className="flex items-center justify-between gap-3">
               <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/[0.15] px-3 py-2 backdrop-blur-md">
                 <span className="grid h-7 w-7 place-items-center rounded-full bg-white/[0.18]">
                   <MapPin className="h-4 w-4" />
                 </span>
                 <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-white/90">
-                  VillaverdeKo · Your barangay
+                  Current barangay
                 </span>
               </div>
 
@@ -63,17 +63,14 @@ export const LocalDashboard: React.FC<LocalDashboardProps> = ({
               </span>
             </div>
 
-            <div className="mt-8">
-              <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.16em] text-white/70">
-                Everyday Villaverde starts here
-              </p>
-              <h1 className={`font-serif-header font-bold leading-[0.98] tracking-tight text-white drop-shadow-sm ${activeBarangay.name.length > 16 ? 'text-[29px]' : 'text-[34px]'}`}>
+            <div className="mt-7">
+              <h2 className={`font-serif-header font-bold leading-[0.98] tracking-tight text-white drop-shadow-sm ${activeBarangay.name.length > 16 ? 'text-[27px]' : 'text-[31px]'}`}>
                 {activeBarangay.name}
-              </h1>
+              </h2>
 
               <div className="mt-3 flex items-end justify-between gap-3">
-                <p className="min-w-0 max-w-[240px] text-xs font-semibold leading-5 text-white/82">
-                  Find practical places, public services, shops, routes, and everyday stops around your barangay.
+                <p className="min-w-0 text-xs font-semibold text-white/80">
+                  {activeBarangay.municipality}, {activeBarangay.province}
                 </p>
 
                 <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-xs font-extrabold text-[#28553F] shadow-sm transition-transform group-hover:translate-x-0.5">
