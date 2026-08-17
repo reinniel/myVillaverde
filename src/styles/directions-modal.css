@@ -1,0 +1,108 @@
+/*
+ * External navigation chooser
+ *
+ * Loaded after the general app stylesheet so the chooser stays fully visible
+ * inside the Directions viewport instead of behaving like an oversized sheet.
+ */
+[role='presentation']:has(> [role='dialog'][aria-labelledby='external-navigation-title']) {
+  display: grid !important;
+  place-items: center !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)) !important;
+  background: rgba(23, 35, 29, .34) !important;
+  -webkit-backdrop-filter: blur(1px) !important;
+  backdrop-filter: blur(1px) !important;
+}
+
+[role='dialog'][aria-labelledby='external-navigation-title'] {
+  display: block !important;
+  width: min(100%, 380px) !important;
+  max-height: calc(100% - 8px) !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  padding: 0 !important;
+  border-radius: 28px !important;
+  box-shadow: 0 24px 70px rgba(23, 35, 29, .30) !important;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+[role='dialog'][aria-labelledby='external-navigation-title']::-webkit-scrollbar {
+  display: none;
+}
+
+[role='dialog'][aria-labelledby='external-navigation-title']::before {
+  display: none !important;
+}
+
+[role='dialog'][aria-labelledby='external-navigation-title'] > div:first-child {
+  align-items: center !important;
+  padding: 18px 18px 12px !important;
+  border-bottom: 0 !important;
+}
+
+[role='dialog'][aria-labelledby='external-navigation-title'] > div:first-child > div {
+  min-width: 0;
+}
+
+[role='dialog'][aria-labelledby='external-navigation-title'] > div:first-child h2 {
+  margin-top: 2px !important;
+  font-size: 1.35rem !important;
+  line-height: 1.15 !important;
+}
+
+[role='dialog'][aria-labelledby='external-navigation-title'] > div:first-child p:last-of-type {
+  max-width: 280px;
+  margin-top: 5px !important;
+  line-height: 1.45 !important;
+}
+
+[role='dialog'][aria-labelledby='external-navigation-title'] > div:first-child button {
+  width: 40px !important;
+  height: 40px !important;
+}
+
+[role='dialog'][aria-labelledby='external-navigation-title'] > div:last-child {
+  display: grid !important;
+  gap: 8px !important;
+  min-height: 0 !important;
+  margin-top: 0 !important;
+  overflow: visible !important;
+  padding: 0 14px 14px !important;
+}
+
+[role='dialog'][aria-labelledby='external-navigation-title'] > div:last-child > a {
+  min-height: 54px !important;
+  border-radius: 18px !important;
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+  background: #FFFFFF !important;
+  box-shadow: 0 1px 0 rgba(24, 36, 31, .02);
+}
+
+@media (max-height: 560px) {
+  [role='presentation']:has(> [role='dialog'][aria-labelledby='external-navigation-title']) {
+    place-items: start center !important;
+    padding-top: max(10px, env(safe-area-inset-top)) !important;
+    padding-bottom: max(10px, env(safe-area-inset-bottom)) !important;
+  }
+
+  [role='dialog'][aria-labelledby='external-navigation-title'] {
+    max-height: calc(100% - 4px) !important;
+  }
+
+  [role='dialog'][aria-labelledby='external-navigation-title'] > div:first-child {
+    padding-top: 13px !important;
+    padding-bottom: 9px !important;
+  }
+
+  [role='dialog'][aria-labelledby='external-navigation-title'] > div:first-child p:last-of-type {
+    display: none !important;
+  }
+
+  [role='dialog'][aria-labelledby='external-navigation-title'] > div:last-child > a {
+    min-height: 48px !important;
+  }
+}
