@@ -152,13 +152,13 @@ export const VisitorDashboard: React.FC<VisitorDashboardProps> = ({
 
           <div className="mt-9 max-w-[320px]">
             <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/75">
-              Visitor & tourist guide
+              Visitor discovery guide
             </p>
             <h1 className="mt-2 font-serif-header text-[32px] font-bold leading-[1.02]">
-              Explore Villaverde like a visitor.
+              Find a real place for your next stop.
             </h1>
             <p className="mt-3 text-sm font-medium leading-5 text-white/80">
-              Discover places to visit, food to try, barangays to explore, and build a trip from the live guide.
+              Browse Villaverde using the same live place listings, map, directions, and saved collections.
             </p>
           </div>
 
@@ -169,7 +169,7 @@ export const VisitorDashboard: React.FC<VisitorDashboardProps> = ({
               className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-4 text-xs font-extrabold text-[#443C45] shadow-sm transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-white/40"
             >
               <Map className="h-4 w-4" aria-hidden="true" />
-              Explore Villaverde
+              Explore the map
             </button>
             <button
               type="button"
