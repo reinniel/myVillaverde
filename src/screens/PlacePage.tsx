@@ -11,9 +11,12 @@ import {
   formatCheckedDate, formatDistance, formatWebsiteLabel, getApprovedPhotoUrls,
   getDirectionsUrl, getDistanceMeters, getOpeningHoursSummary, getSafeHttpUrl,
 } from '../utils/places';
-import { buildPlacePageUrl } from '../utils/placeNavigation';
 import {
-  buildGalleryHistoryState, readGalleryIndexFromHistory,
+  buildMapUrl, buildPlacePageUrl, readMapNavigationFromUrl,
+} from '../utils/placeNavigation';
+import {
+  buildGalleryHistoryState, buildMapReturnHistoryState, readCategoryModalStateFromHistory,
+  readGalleryIndexFromHistory,
 } from '../utils/navigationHistory';
 
 export interface PlacePageProps {
@@ -186,6 +189,34 @@ export const PlacePage: React.FC<PlacePageProps> = ({
     await copyPlaceLink(url);
   };
 
+const showPlaceOnMap = () => {
+  if (!place) return;
+  const mapScopeFromUrl = readMapNavigationFromUrl()?.scope;
+  const categoryScope = readCategoryModalStateFromHistory(window.history.state)?.scope;
+  const storedMapScope = window.history.state && typeof window.history.state === 'object'
+    ? (window.history.state as Record<string, unknown>).mapScope
+    : null;
+  const scope = mapScopeFromUrl
+    ?? categoryScope
+    ?? (storedMapScope === 'local' || storedMapScope === 'visitor' ? storedMapScope : null)
+    ?? 'visitor';
+  const mapState = {
+    panelView: 'categories' as const,
+    categoryId: 'all' as const,
+    selectedPlaceId: place.id,
+  };
+  const nextHistoryState = buildMapReturnHistoryState({
+    ...window.history.state,
+    myVillaverdeMapEntry: true,
+    mapScope: scope,
+    barangayId: null,
+  }, mapState);
+
+  window.history.pushState(nextHistoryState, '', buildMapUrl(scope));
+  window.dispatchEvent(new PopStateEvent('popstate', { state: nextHistoryState }));
+};
+
+
   if (!place) {
     const isLoading = dataState === 'loading';
     return (
@@ -308,7 +339,7 @@ export const PlacePage: React.FC<PlacePageProps> = ({
           <a href={getDirectionsUrl(place)} target="_blank" rel="noreferrer" className="flex min-h-[82px] flex-col items-center justify-center gap-2 rounded-[22px] bg-[#26372F] px-2 text-white shadow-sm transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#26372F]/25"><Navigation className="h-5 w-5" /><span className="text-[11px] font-extrabold">Directions</span></a>
           <button type="button" onClick={() => onToggleSaved(place)} className={`flex min-h-[82px] flex-col items-center justify-center gap-2 rounded-[22px] border px-2 transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20 ${isSaved ? 'border-[#2B6A4E] bg-[#DDEBDF] text-[#2B6A4E]' : 'border-[#D1DAD2] bg-[#FFFDF7] text-[#35463E]'}`} aria-pressed={isSaved}><Bookmark className={`h-5 w-5 ${isSaved ? 'fill-current' : ''}`} /><span className="text-[11px] font-extrabold">{isSaved ? 'Saved' : 'Save'}</span></button>
           <button type="button" onClick={() => onToggleTrip(place)} disabled={isTripFull && !isInTrip} className={`flex min-h-[82px] flex-col items-center justify-center gap-2 rounded-[22px] border px-2 transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#B5753D]/20 disabled:cursor-not-allowed disabled:opacity-45 ${isInTrip ? 'border-[#B5753D] bg-[#F6E7D5] text-[#8A5726]' : 'border-[#D1DAD2] bg-[#FFFDF7] text-[#35463E]'}`} aria-pressed={isInTrip}><Route className="h-5 w-5" /><span className="text-[11px] font-extrabold">{isInTrip ? 'In trip' : isTripFull ? 'Trip full' : 'Add to trip'}</span></button>
-          <button type="button" onClick={() => void sharePlace()} className="flex min-h-[82px] flex-col items-center justify-center gap-2 rounded-[22px] border border-[#D1DAD2] bg-[#FFFDF7] px-2 text-[#35463E] transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20"><Share2 className="h-5 w-5" /><span className="text-[11px] font-extrabold">{shareState === 'copied' ? 'Copied' : 'Share'}</span></button>
+          <button type="button" onClick={showPlaceOnMap} className="flex min-h-[82px] flex-col items-center justify-center gap-2 rounded-[22px] border border-[#D1DAD2] bg-[#FFFDF7] px-2 text-[#35463E] transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20" aria-label={`Show ${place.name} on the myVillaverde map`}><MapPin className="h-5 w-5" /><span className="text-[11px] font-extrabold">Show on map</span></button>
         </section>
 
         {(place.phone || primaryExternalUrl) && (
