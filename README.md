@@ -33,6 +33,7 @@
 - **VillaverdeKo** gives residents barangay-aware discovery, nearby places, saved collections, and direct map access.
 - **VillaverdeMo** gives visitors curated discovery, barangay guides, place pages, saved collections, and a four-stop trip planner.
 - **Explore Map** combines search, category filters, persistent map state, focused barangay views, and location-aware nearby results.
+- **Native Directions** keeps single-place driving directions inside myVillaverde using OpenStreetMap-based routing, while still offering Apple Maps, Waze, and Google Maps as optional external navigation apps.
 - **Live place data** comes from the published Villaverde Places database, with a generated 36-place fallback when the live feed is unavailable.
 - **Resilient states** cover loading, offline use, reconnecting, unavailable records, reduced motion, browser zoom, and render recovery.
 
@@ -43,6 +44,7 @@
 - Display photos only when a usable URL and approved permission are present.
 - Store lightweight local preferences and place IDs rather than duplicating authoritative place records.
 - Keep the core guide useful when the live database cannot be reached.
+- Keep myVillaverde as the primary experience; external navigation apps are optional handoffs rather than the default Directions flow.
 
 ## Technology
 
@@ -53,7 +55,7 @@
 | Maps | Leaflet, React Leaflet, OpenStreetMap |
 | Data | Published Google Sheets CSV with a generated TypeScript fallback |
 | Persistence | Browser local storage |
-| Directions | Google Maps URLs |
+| Directions | Native OSRM/OpenStreetMap driving routes with optional external navigation apps |
 
 ## Getting started
 
@@ -79,7 +81,7 @@ Useful individual commands:
 | Command | Purpose |
 | --- | --- |
 | `npm run lint` | Run TypeScript validation without emitting files |
-| `npm test` | Run targeted navigation, URL-safety, and data-fallback tests |
+| `npm test` | Run targeted navigation, URL-safety, data-fallback, and routing tests |
 | `npm run build` | Create a production-optimized Vite build |
 | `npm run check` | Run TypeScript validation, targeted tests, and the production build |
 | `npm run data:check` | Compare the fallback with the live Places database |
@@ -90,11 +92,11 @@ Useful individual commands:
 | Path | Responsibility |
 | --- | --- |
 | `src/App.tsx` | Application state, navigation, and screen orchestration |
-| `src/screens/` | Landing, dashboards, map, and place pages |
-| `src/components/` | Reusable sheets, cards, galleries, and recovery UI |
+| `src/screens/` | Landing, dashboards, map, place pages, and native directions |
+| `src/components/` | Reusable sheets, cards, galleries, recovery UI, and directions bridge |
 | `src/hooks/` | Live place loading and online/offline transitions |
 | `src/data/` | Categories, barangays, configuration, and fallback places |
-| `src/utils/` | Place normalization, filtering, navigation, distance, and map helpers |
+| `src/utils/` | Place normalization, filtering, navigation, distance, map, and routing helpers |
 | `scripts/` | Data synchronization and production-build enforcement |
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the full application boundaries and data flow.
@@ -102,6 +104,12 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full application boundaries and d
 ## Data source
 
 The published Villaverde Places database is authoritative. Runtime data is normalized into shared `PlaceRecord` objects; duplicate and permanently closed rows are excluded. When the live feed is unavailable, the app uses the generated snapshot in `src/data/places.ts`.
+
+## Routing
+
+Single-place driving directions are rendered inside myVillaverde. The initial routing backend uses the public Project OSRM endpoint against OpenStreetMap road data. This is an MVP dependency rather than the final infrastructure target; a dedicated or self-hosted OSRM-compatible service should replace it before native routing is treated as infrastructure-independent production routing.
+
+Users can explicitly hand a destination off to Apple Maps, Waze, or Google Maps from the Directions screen. The existing external Google Maps URL remains a progressive fallback if the native directions bridge cannot run.
 
 ## Source of truth
 
