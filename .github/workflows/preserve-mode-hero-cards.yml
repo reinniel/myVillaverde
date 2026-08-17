@@ -1,0 +1,107 @@
+name: Preserve Mode Hero Cards
+
+on:
+  push:
+    branches:
+      - fix/preserve-mode-hero-cards
+    paths:
+      - .github/workflows/preserve-mode-hero-cards.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Restore familiar hero cards without undoing mode split
+        shell: python
+        run: |
+          from pathlib import Path
+
+          local = Path('src/screens/LocalDashboard.tsx')
+          text = local.read_text()
+          start = text.index('      <section>\n        <button')
+          end = text.index('      <section aria-label="VillaverdeKo shortcuts">')
+          hero = '''      <section>
+        <button
+          type="button"
+          onClick={onOpenBarangay}
+          key={activeBarangay.id}
+          className="barangay-theme-swap group relative w-full overflow-hidden rounded-[28px] text-left text-white shadow-[0_8px_22px_rgba(70,45,120,0.24)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_30px_rgba(70,45,120,0.30)] active:translate-y-0 active:scale-[0.985] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/30"
+          style={{
+            backgroundImage: `linear-gradient(135deg, ${activeBarangay.colors[0]} 0%, ${activeBarangay.colors[1]} 52%, ${activeBarangay.colors[2]} 100%)`,
+          }}
+          aria-label={`Current barangay is ${activeBarangay.name}. Tap to change barangay.`}
+        >
+          <BarangayArtwork barangay={activeBarangay} />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-white/5" />
+
+          <div className="relative z-10 flex min-h-[176px] flex-col justify-between p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/[0.15] px-3 py-2 backdrop-blur-md">
+                <span className="grid h-7 w-7 place-items-center rounded-full bg-white/[0.18]">
+                  <MapPin className="h-4 w-4" />
+                </span>
+                <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-white/90">
+                  Current barangay
+                </span>
+              </div>
+
+              <span className="rounded-full border border-white/20 bg-white/[0.15] px-3 py-1.5 text-xs font-extrabold tracking-wider backdrop-blur-md">
+                {activeBarangay.zipCode}
+              </span>
+            </div>
+
+            <div className="mt-7">
+              <h2 className={`font-serif-header font-bold leading-[0.98] tracking-tight text-white drop-shadow-sm ${activeBarangay.name.length > 16 ? 'text-[27px]' : 'text-[31px]'}`}>
+                {activeBarangay.name}
+              </h2>
+
+              <div className="mt-3 flex items-end justify-between gap-3">
+                <p className="min-w-0 text-xs font-semibold text-white/80">
+                  {activeBarangay.municipality}, {activeBarangay.province}
+                </p>
+
+                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-xs font-extrabold text-[#28553F] shadow-sm transition-transform group-hover:translate-x-0.5">
+                  <ArrowRightLeft className="h-3.5 w-3.5" />
+                  Change
+                </span>
+              </div>
+            </div>
+          </div>
+        </button>
+      </section>
+
+'''
+          local.write_text(text[:start] + hero + text[end:])
+
+          visitor = Path('src/screens/VisitorDashboard.tsx')
+          text = visitor.read_text()
+          replacements = [
+            ('Visitor & tourist guide', 'Visitor discovery guide'),
+            ('Explore Villaverde like a visitor.', 'Find a real place for your next stop.'),
+            ('Discover places to visit, food to try, barangays to explore, and build a trip from the live guide.', 'Browse Villaverde using the same live place listings, map, directions, and saved collections.'),
+            ('              Explore Villaverde\n', '              Explore the map\n'),
+          ]
+          for old, new in replacements:
+            if old not in text:
+              raise SystemExit(f'Visitor hero target not found: {old}')
+            text = text.replace(old, new, 1)
+          visitor.write_text(text)
+
+      - name: Verify
+        run: npm ci && npm run verify
+
+      - name: Commit restoration
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/screens/LocalDashboard.tsx src/screens/VisitorDashboard.tsx
+          git commit -m "fix: preserve familiar Ko and Mo hero cards"
+          git push
