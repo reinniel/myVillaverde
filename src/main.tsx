@@ -5,6 +5,7 @@ import { AppErrorBoundary } from './components/AppErrorBoundary.tsx';
 import { NativeDirectionsBridge } from './components/NativeDirectionsBridge.tsx';
 import './index.css';
 import './styles/directions-modal.css';
+import './styles/directions-modal-layer-fix.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
