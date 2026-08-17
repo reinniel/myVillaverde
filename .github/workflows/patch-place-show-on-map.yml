@@ -1,4 +1,4 @@
-name: Patch Place Show on Map
+name: Tidy Place Show on Map
 
 on:
   push:
@@ -11,78 +11,37 @@ permissions:
   contents: write
 
 jobs:
-  patch:
+  tidy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Add Show on map action
+      - name: Tidy inserted function
         shell: python
         run: |
           from pathlib import Path
           import re
+          import textwrap
 
           path = Path('src/screens/PlacePage.tsx')
           text = path.read_text()
-
-          old_import = "import { buildPlacePageUrl } from '../utils/placeNavigation';\nimport {\n  buildGalleryHistoryState, readGalleryIndexFromHistory,\n} from '../utils/navigationHistory';"
-          new_import = "import {\n  buildMapUrl, buildPlacePageUrl, readMapNavigationFromUrl,\n} from '../utils/placeNavigation';\nimport {\n  buildGalleryHistoryState, buildMapReturnHistoryState, readCategoryModalStateFromHistory,\n  readGalleryIndexFromHistory,\n} from '../utils/navigationHistory';"
-          if old_import not in text:
-              raise SystemExit('Expected navigation imports not found')
-          text = text.replace(old_import, new_import, 1)
-
-          show_map_function = """
-
-          const showPlaceOnMap = () => {
-            if (!place) return;
-            const mapScopeFromUrl = readMapNavigationFromUrl()?.scope;
-            const categoryScope = readCategoryModalStateFromHistory(window.history.state)?.scope;
-            const storedMapScope = window.history.state && typeof window.history.state === 'object'
-              ? (window.history.state as Record<string, unknown>).mapScope
-              : null;
-            const scope = mapScopeFromUrl
-              ?? categoryScope
-              ?? (storedMapScope === 'local' || storedMapScope === 'visitor' ? storedMapScope : null)
-              ?? 'visitor';
-            const mapState = {
-              panelView: 'categories' as const,
-              categoryId: 'all' as const,
-              selectedPlaceId: place.id,
-            };
-            const nextHistoryState = buildMapReturnHistoryState({
-              ...window.history.state,
-              myVillaverdeMapEntry: true,
-              mapScope: scope,
-              barangayId: null,
-            }, mapState);
-
-            window.history.pushState(nextHistoryState, '', buildMapUrl(scope));
-            window.dispatchEvent(new PopStateEvent('popstate', { state: nextHistoryState }));
-          };
-          """
-          share_match = re.search(r"(  const sharePlace = async \(\) => \{.*?\n  \};)(\n\n  if \(!place\) \{)", text, re.S)
-          if not share_match:
-              raise SystemExit('Expected sharePlace block not found')
-          text = text[:share_match.start()] + share_match.group(1) + show_map_function + share_match.group(2) + text[share_match.end():]
-
-          old_action = """          <button type=\"button\" onClick={() => void sharePlace()} className=\"flex min-h-[82px] flex-col items-center justify-center gap-2 rounded-[22px] border border-[#D1DAD2] bg-[#FFFDF7] px-2 text-[#35463E] transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20\"><Share2 className=\"h-5 w-5\" /><span className=\"text-[11px] font-extrabold\">{shareState === 'copied' ? 'Copied' : 'Share'}</span></button>"""
-          new_action = """          <button type=\"button\" onClick={showPlaceOnMap} className=\"flex min-h-[82px] flex-col items-center justify-center gap-2 rounded-[22px] border border-[#D1DAD2] bg-[#FFFDF7] px-2 text-[#35463E] transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20\" aria-label={`Show ${place.name} on the myVillaverde map`}><MapPin className=\"h-5 w-5\" /><span className=\"text-[11px] font-extrabold\">Show on map</span></button>"""
-          if old_action not in text:
-              raise SystemExit('Expected grid Share action not found')
-          text = text.replace(old_action, new_action, 1)
-
+          match = re.search(r"\n(const showPlaceOnMap = \(\) => \{.*?\n\};)\n\n\n  if \(!place\) \{", text, re.S)
+          if not match:
+              raise SystemExit('Inserted showPlaceOnMap block not found')
+          tidied = textwrap.indent(match.group(1), '  ')
+          text = text[:match.start()] + '\n' + tidied + '\n\n  if (!place) {' + text[match.end():]
           path.write_text(text)
 
       - name: Verify
         run: npm ci && npm run verify
 
-      - name: Commit patch
+      - name: Commit tidy
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/screens/PlacePage.tsx
-          git commit -m "fix: add show on map place action"
+          git commit -m "chore: tidy show on map action"
           git push
