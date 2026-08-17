@@ -103,8 +103,15 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full application boundaries and d
 
 The published Villaverde Places database is authoritative. Runtime data is normalized into shared `PlaceRecord` objects; duplicate and permanently closed rows are excluded. When the live feed is unavailable, the app uses the generated snapshot in `src/data/places.ts`.
 
+## Source of truth
+
+- **Application code:** GitHub `main` is authoritative and is the release/deployment baseline.
+- **Places data:** the published myVillaverde Places Google Sheet is authoritative.
+- **Production:** Cloudflare deploys the verified GitHub baseline.
+- **Development tools:** Google AI Studio or other editors may be used as working environments, but changes are not canonical until they are committed and verified on GitHub `main`.
+
 ## Release
 
 **Current version:** `1.0.1`
 
-Phases 1 through 6 are complete. Google AI Studio remains the active working copy, while GitHub `main` is the verified versioned mirror.
+Phases 1 through 6 are complete. Phase 7 begins with real-world data readiness before barangay identity presentation is expanded.

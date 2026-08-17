@@ -1,6 +1,6 @@
 # Architecture
 
-myVillaverde is a client-side Vite and React application. The current architecture grew out of the Phase 3R extraction refactor and now supports the completed map, place-page, nearby, saved, Phase 6A visitor discovery, Phase 6B barangay discovery, Phase 6C trip-planning MVP, and Phase 6D release-hardening pass.
+myVillaverde is a client-side Vite and React application. The current architecture grew out of the Phase 3R extraction refactor and now supports the completed map, place-page, nearby, saved, Phase 6A visitor discovery, Phase 6B barangay discovery, Phase 6C trip-planning MVP, Phase 6D polish, and the v1.0.1 release-hardening pass.
 
 ## Application boundaries
 
@@ -40,19 +40,38 @@ The published Google Sheet is authoritative. Run `npm run data:sync` after canon
 - External website and source links must use an absolute HTTP(S) URL.
 - Missing ratings, popularity, operating details, or barangay claims must remain unknown rather than being fabricated.
 
+## Source-of-truth model
+
+- **Application code:** GitHub `main` is authoritative.
+- **Places data:** the published myVillaverde Places Google Sheet is authoritative.
+- **Production:** Cloudflare deploys from the verified GitHub baseline.
+- **Development/editor environments:** Google AI Studio or other editors may be used for active work, but their state is not canonical until the changes are committed and verified on GitHub `main`.
+
 ## Release workflow
 
-1. Keep Google AI Studio as the active working copy and GitHub `main` as its verified versioned mirror.
-2. Keep the generated fallback synchronized with the live Places source.
-3. Run typecheck, production build, and preview checks before committing from AI Studio to GitHub.
-4. Confirm the GitHub checkpoint matches the verified AI Studio state.
+1. Make application changes against the current GitHub `main` baseline.
+2. Keep the generated fallback synchronized with the authoritative live Places source.
+3. Run typecheck, tests, production build, and preview checks before release changes are finalized.
+4. Confirm the GitHub checkpoint matches the reviewed development state.
 5. Complete visual and interaction verification of empty, offline, loading, mobile, accessibility, persistence, and recovery states.
 6. Run `npm run verify` for every release gate; it checks source data, TypeScript, targeted utility tests, and a forced production build.
+7. Publish releases from the verified GitHub baseline and deploy production from that same baseline.
+
+## Production deployment
+
+myVillaverde is deployed to Cloudflare as a static Vite build. The production branch is `main`.
+
+- Build command: `npm run build`
+- Deploy command: `npx wrangler deploy --assets=./dist`
+- Version command: `npx wrangler versions upload --assets=./dist`
+- Build output: `dist/`
+
+Non-production branch builds may be disabled when branch previews are not needed. Production deployment should always trace back to a verified GitHub commit.
 
 ## Deferred decisions
 
 - React Router remains deferred while the current history behavior is stable.
 - Server-side rendering remains deferred because the product is a client-side local guide.
-- Component and end-to-end coverage should be added as the Phase 6 interaction surface grows; targeted Node tests currently protect navigation history, URL validation, duplicate-ID rejection, and live-data fallback behavior.
+- Component and end-to-end coverage should be added as the Phase 7 interaction surface grows; targeted Node tests currently protect navigation history, URL validation, duplicate-ID rejection, and live-data fallback behavior.
 - Broader design-system extraction should follow demonstrated reuse rather than happen preemptively.
 - The production build wrapper sets `NODE_ENV=production` inside Node so host-level development environment variables cannot silently produce an oversized release bundle.
