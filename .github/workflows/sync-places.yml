@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - .github/workflows/sync-places.yml
+      - .github/places-sync.trigger
 
 permissions:
   contents: write
