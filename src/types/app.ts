@@ -5,7 +5,7 @@ export type TransitionDirection = 'left' | 'right' | 'neutral';
 export type ModalId = 'barangay' | 'visitor-barangay' | 'saved' | 'trip' | 'nearby' | 'category' | null;
 export type DashboardModalId = Extract<ModalId, 'saved' | 'trip' | 'nearby'>;
 export type CategoryScope = 'local' | 'visitor';
-export type MapCategoryId = 'all' | 'food' | 'services' | 'transport' | 'visit' | 'government';
+export type MapCategoryId = 'all' | 'food' | 'services' | 'transport' | 'visit' | 'government' | 'worship';
 export type MapPanelView = 'categories' | 'layers' | 'nearby' | 'location';
 export type MapSheetLevel = 0 | 1 | 2;
 
