@@ -62,6 +62,8 @@ export const NativeDirectionsBridge: React.FC<NativeDirectionsBridgeProps> = ({ 
   useEffect(() => {
     const interceptDirections = (event: MouseEvent) => {
       if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      if (!new URL(window.location.href).searchParams.get('place')) return;
+
       const target = event.target;
       if (!(target instanceof Element)) return;
       const anchor = target.closest('a[href]');
