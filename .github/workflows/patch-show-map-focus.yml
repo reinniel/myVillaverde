@@ -25,54 +25,43 @@ jobs:
 
           path = Path('src/screens/MapScreen.tsx')
           text = path.read_text()
-
-          old = """  useEffect(() => {
-    setSelectedPlaceId(initialSelectedPlaceId);
-  }, [initialSelectedPlaceId]);
-"""
-          new = """  useEffect(() => {
-    setSelectedPlaceId(initialSelectedPlaceId);
-    if (!initialSelectedPlaceId) return;
-
-    const place = places.find((candidate) => candidate.id === initialSelectedPlaceId);
-    if (!place) return;
-
-    const focusTimeoutId = window.setTimeout(() => {
-      const map = mapRef.current;
-      if (!map) return;
-
-      setSelectedBarangayId(null);
-      setPanelView('categories');
-      setSheetLevel(1);
-      setDragOffset(0);
-
-      const target: [number, number] = [place.latitude, place.longitude];
-      const zoom = Math.max(16, map.getZoom() || 16);
-      if (prefersReducedMotion) {
-        map.setView(target, zoom, { animate: false });
-      } else {
-        map.flyTo(target, zoom, { duration: 0.75 });
-      }
-
-      const panDelay = prefersReducedMotion ? 0 : 780;
-      window.setTimeout(() => {
-        if (mapRef.current !== map) return;
-        const currentViewportHeight = Math.round(window.visualViewport?.height ?? window.innerHeight);
-        map.panBy([0, Math.min(150, currentViewportHeight * 0.17)], {
-          animate: !prefersReducedMotion,
-          duration: prefersReducedMotion ? 0 : 0.35,
-        });
-      }, panDelay);
-    }, 0);
-
-    return () => window.clearTimeout(focusTimeoutId);
-  }, [initialSelectedPlaceId, places, prefersReducedMotion]);
-"""
-
+          old = "  useEffect(() => {\n    setSelectedPlaceId(initialSelectedPlaceId);\n  }, [initialSelectedPlaceId]);\n"
+          new = (
+              "  useEffect(() => {\n"
+              "    setSelectedPlaceId(initialSelectedPlaceId);\n"
+              "    if (!initialSelectedPlaceId) return;\n\n"
+              "    const place = places.find((candidate) => candidate.id === initialSelectedPlaceId);\n"
+              "    if (!place) return;\n\n"
+              "    const focusTimeoutId = window.setTimeout(() => {\n"
+              "      const map = mapRef.current;\n"
+              "      if (!map) return;\n\n"
+              "      setSelectedBarangayId(null);\n"
+              "      setPanelView('categories');\n"
+              "      setSheetLevel(1);\n"
+              "      setDragOffset(0);\n\n"
+              "      const target: [number, number] = [place.latitude, place.longitude];\n"
+              "      const zoom = Math.max(16, map.getZoom() || 16);\n"
+              "      if (prefersReducedMotion) {\n"
+              "        map.setView(target, zoom, { animate: false });\n"
+              "      } else {\n"
+              "        map.flyTo(target, zoom, { duration: 0.75 });\n"
+              "      }\n\n"
+              "      const panDelay = prefersReducedMotion ? 0 : 780;\n"
+              "      window.setTimeout(() => {\n"
+              "        if (mapRef.current !== map) return;\n"
+              "        const currentViewportHeight = Math.round(window.visualViewport?.height ?? window.innerHeight);\n"
+              "        map.panBy([0, Math.min(150, currentViewportHeight * 0.17)], {\n"
+              "          animate: !prefersReducedMotion,\n"
+              "          duration: prefersReducedMotion ? 0 : 0.35,\n"
+              "        });\n"
+              "      }, panDelay);\n"
+              "    }, 0);\n\n"
+              "    return () => window.clearTimeout(focusTimeoutId);\n"
+              "  }, [initialSelectedPlaceId, places, prefersReducedMotion]);\n"
+          )
           if old not in text:
               raise SystemExit('Expected initial selected-place effect not found')
-          text = text.replace(old, new, 1)
-          path.write_text(text)
+          path.write_text(text.replace(old, new, 1))
 
       - name: Verify
         run: npm ci && npm run verify
