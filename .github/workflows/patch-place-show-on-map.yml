@@ -22,6 +22,7 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import re
 
           path = Path('src/screens/PlacePage.tsx')
           text = path.read_text()
@@ -32,33 +33,7 @@ jobs:
               raise SystemExit('Expected navigation imports not found')
           text = text.replace(old_import, new_import, 1)
 
-          share_block = """  const sharePlace = async () => {
-            if (!place) return;
-            const url = buildPlacePageUrl(place.id);
-            if (navigator.share) {
-              try {
-                await navigator.share({ title: place.name, text: `${place.name} in ${place.barangay}, Villaverde`, url });
-                return;
-              } catch (error) {
-                if (error instanceof DOMException && error.name === 'AbortError') return;
-              }
-            }
-            await copyPlaceLink(url);
-          };
-          """
-          show_map_block = """  const sharePlace = async () => {
-            if (!place) return;
-            const url = buildPlacePageUrl(place.id);
-            if (navigator.share) {
-              try {
-                await navigator.share({ title: place.name, text: `${place.name} in ${place.barangay}, Villaverde`, url });
-                return;
-              } catch (error) {
-                if (error instanceof DOMException && error.name === 'AbortError') return;
-              }
-            }
-            await copyPlaceLink(url);
-          };
+          show_map_function = """
 
           const showPlaceOnMap = () => {
             if (!place) return;
@@ -87,9 +62,10 @@ jobs:
             window.dispatchEvent(new PopStateEvent('popstate', { state: nextHistoryState }));
           };
           """
-          if share_block not in text:
+          share_match = re.search(r"(  const sharePlace = async \(\) => \{.*?\n  \};)(\n\n  if \(!place\) \{)", text, re.S)
+          if not share_match:
               raise SystemExit('Expected sharePlace block not found')
-          text = text.replace(share_block, show_map_block, 1)
+          text = text[:share_match.start()] + share_match.group(1) + show_map_function + share_match.group(2) + text[share_match.end():]
 
           old_action = """          <button type=\"button\" onClick={() => void sharePlace()} className=\"flex min-h-[82px] flex-col items-center justify-center gap-2 rounded-[22px] border border-[#D1DAD2] bg-[#FFFDF7] px-2 text-[#35463E] transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20\"><Share2 className=\"h-5 w-5\" /><span className=\"text-[11px] font-extrabold\">{shareState === 'copied' ? 'Copied' : 'Share'}</span></button>"""
           new_action = """          <button type=\"button\" onClick={showPlaceOnMap} className=\"flex min-h-[82px] flex-col items-center justify-center gap-2 rounded-[22px] border border-[#D1DAD2] bg-[#FFFDF7] px-2 text-[#35463E] transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2B6A4E]/20\" aria-label={`Show ${place.name} on the myVillaverde map`}><MapPin className=\"h-5 w-5\" /><span className=\"text-[11px] font-extrabold\">Show on map</span></button>"""
