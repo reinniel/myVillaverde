@@ -132,7 +132,41 @@ export const MapScreen: React.FC<MapScreenProps> = ({
 
   useEffect(() => {
     setSelectedPlaceId(initialSelectedPlaceId);
-  }, [initialSelectedPlaceId]);
+    if (!initialSelectedPlaceId) return;
+
+    const place = places.find((candidate) => candidate.id === initialSelectedPlaceId);
+    if (!place) return;
+
+    const focusTimeoutId = window.setTimeout(() => {
+      const map = mapRef.current;
+      if (!map) return;
+
+      setSelectedBarangayId(null);
+      setPanelView('categories');
+      setSheetLevel(1);
+      setDragOffset(0);
+
+      const target: [number, number] = [place.latitude, place.longitude];
+      const zoom = Math.max(16, map.getZoom() || 16);
+      if (prefersReducedMotion) {
+        map.setView(target, zoom, { animate: false });
+      } else {
+        map.flyTo(target, zoom, { duration: 0.75 });
+      }
+
+      const panDelay = prefersReducedMotion ? 0 : 780;
+      window.setTimeout(() => {
+        if (mapRef.current !== map) return;
+        const currentViewportHeight = Math.round(window.visualViewport?.height ?? window.innerHeight);
+        map.panBy([0, Math.min(150, currentViewportHeight * 0.17)], {
+          animate: !prefersReducedMotion,
+          duration: prefersReducedMotion ? 0 : 0.35,
+        });
+      }, panDelay);
+    }, 0);
+
+    return () => window.clearTimeout(focusTimeoutId);
+  }, [initialSelectedPlaceId, places, prefersReducedMotion]);
 
   useEffect(() => {
     if (selectedPlaceId && !places.some((place) => place.id === selectedPlaceId)) closePlacePreview();
