@@ -152,13 +152,13 @@ export const VisitorDashboard: React.FC<VisitorDashboardProps> = ({
 
           <div className="mt-9 max-w-[320px]">
             <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/75">
-              Visitor discovery guide
+              Visitor & tourist guide
             </p>
             <h1 className="mt-2 font-serif-header text-[32px] font-bold leading-[1.02]">
-              Find a real place for your next stop.
+              Explore Villaverde like a visitor.
             </h1>
             <p className="mt-3 text-sm font-medium leading-5 text-white/80">
-              Browse Villaverde using the same live place listings, map, directions, and saved collections.
+              Discover places to visit, food to try, barangays to explore, and build a trip from the live guide.
             </p>
           </div>
 
@@ -169,7 +169,7 @@ export const VisitorDashboard: React.FC<VisitorDashboardProps> = ({
               className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-4 text-xs font-extrabold text-[#443C45] shadow-sm transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-white/40"
             >
               <Map className="h-4 w-4" aria-hidden="true" />
-              Explore the map
+              Explore Villaverde
             </button>
             <button
               type="button"
@@ -198,7 +198,7 @@ export const VisitorDashboard: React.FC<VisitorDashboardProps> = ({
         </div>
       )}
 
-      <section className="grid grid-cols-2 gap-2.5" aria-label="Visitor shortcuts">
+      <section className="grid grid-cols-3 gap-2.5" aria-label="Visitor shortcuts">
         <button
           type="button"
           onClick={onOpenMap}
@@ -208,17 +208,6 @@ export const VisitorDashboard: React.FC<VisitorDashboardProps> = ({
           <span className="mt-3 block text-xs font-extrabold text-[#26372F]">Map</span>
           <span className="mt-1 block text-[10px] font-medium leading-4 text-[#748078]">
             See all listings
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={() => onOpenModal('trip')}
-          className="rounded-[22px] border border-[#D7DED4] bg-[#FFFDF7] p-3 text-left shadow-xs transition active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#B5753D]/20"
-        >
-          <Route className="h-5 w-5 text-[#B5753D]" aria-hidden="true" />
-          <span className="mt-3 block text-xs font-extrabold text-[#26372F]">Plan</span>
-          <span className="mt-1 block text-[10px] font-medium leading-4 text-[#748078]">
-            Build a route
           </span>
         </button>
         <button
@@ -245,10 +234,30 @@ export const VisitorDashboard: React.FC<VisitorDashboardProps> = ({
         </button>
       </section>
 
+      <section aria-labelledby="visitor-trip-title">
+        <button
+          type="button"
+          onClick={() => onOpenModal('trip')}
+          className="group relative w-full overflow-hidden rounded-[28px] bg-[linear-gradient(135deg,#6C4F72_0%,#8E5E78_50%,#B5753D_100%)] p-5 text-left text-white shadow-[0_10px_26px_rgba(103,73,96,0.20)] transition active:scale-[0.99] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#76527D]/25"
+        >
+          <span className="pointer-events-none absolute -right-8 -top-12 h-32 w-32 rounded-full bg-white/10" />
+          <span className="relative flex items-center justify-between gap-4">
+            <span className="min-w-0">
+              <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-white/75">VillaverdeMo trip tool</span>
+              <span id="visitor-trip-title" className="mt-1 block font-serif-header text-[22px] font-bold">Plan your visit</span>
+              <span className="mt-1.5 block max-w-[285px] text-xs font-medium leading-5 text-white/80">Build an ordered trip from real places, then open each stop on the map or in Directions.</span>
+            </span>
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-white/20 bg-white/15 backdrop-blur-sm transition-transform group-hover:translate-x-0.5">
+              <Route className="h-6 w-6" aria-hidden="true" />
+            </span>
+          </span>
+        </button>
+      </section>
+
       <BarangayDiscoverySection places={places} dataState={dataState} onOpenBarangay={onOpenBarangay} />
 
       <CategoryList
-        title="Browse by visitor need"
+        title="Discover as a visitor"
         categories={VISITOR_CATEGORIES}
         onOpenCategory={handleVisitorCategory}
       />
