@@ -8,7 +8,7 @@
     "build": "node scripts/build-production.mjs",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test src/utils/navigationHistory.test.ts src/utils/places.test.ts src/utils/placesDataState.test.ts",
+    "test": "node --experimental-strip-types --test src/utils/navigationHistory.test.ts src/utils/places.test.ts src/utils/placesDataState.test.ts src/utils/routing.test.ts",
     "check": "npm run lint && npm test && npm run build",
     "data:sync": "node scripts/sync-places-fallback.mjs",
     "data:check": "node scripts/sync-places-fallback.mjs --check",
