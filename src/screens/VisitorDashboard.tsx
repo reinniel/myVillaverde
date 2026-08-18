@@ -120,12 +120,11 @@ export const VisitorDashboard: React.FC<VisitorDashboardProps> = ({
   );
 
   const [rotatingBarangayIndex, setRotatingBarangayIndex] = useState(0);
-  const [barangaySwapPhase, setBarangaySwapPhase] = useState<'idle' | 'exit' | 'enter'>('idle');
+  const [isBarangayTransitioning, setIsBarangayTransitioning] = useState(false);
 
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let swapTimeoutId: number | undefined;
-    let enterFrameId: number | undefined;
+    let transitionTimeoutId: number | undefined;
 
     const intervalId = window.setInterval(() => {
       if (prefersReducedMotion) {
@@ -134,30 +133,25 @@ export const VisitorDashboard: React.FC<VisitorDashboardProps> = ({
         return;
       }
 
-      setBarangaySwapPhase('exit');
-      swapTimeoutId = window.setTimeout(() => {
-        setRotatingBarangayIndex((currentIndex) =>
-          (currentIndex + 1) % ROTATING_BARANGAY_NAMES.length);
-        setBarangaySwapPhase('enter');
-        enterFrameId = window.requestAnimationFrame(() => {
-          setBarangaySwapPhase('idle');
-        });
-      }, 180);
+      setIsBarangayTransitioning(true);
+      setRotatingBarangayIndex((currentIndex) =>
+        (currentIndex + 1) % ROTATING_BARANGAY_NAMES.length);
+
+      transitionTimeoutId = window.setTimeout(() => {
+        setIsBarangayTransitioning(false);
+      }, 460);
     }, 2000);
 
     return () => {
       window.clearInterval(intervalId);
-      if (swapTimeoutId !== undefined) window.clearTimeout(swapTimeoutId);
-      if (enterFrameId !== undefined) window.cancelAnimationFrame(enterFrameId);
+      if (transitionTimeoutId !== undefined) window.clearTimeout(transitionTimeoutId);
     };
   }, []);
 
   const rotatingBarangayName = ROTATING_BARANGAY_NAMES[rotatingBarangayIndex];
-  const rotatingBarangayClassName = barangaySwapPhase === 'exit'
-    ? 'opacity-0 -translate-y-1.5'
-    : barangaySwapPhase === 'enter'
-      ? 'opacity-0 translate-y-1.5'
-      : 'opacity-100 translate-y-0';
+  const previousBarangayName = ROTATING_BARANGAY_NAMES[
+    (rotatingBarangayIndex - 1 + ROTATING_BARANGAY_NAMES.length) % ROTATING_BARANGAY_NAMES.length
+  ];
   const availablePlaceCount = places.length;
   const isLoading = dataState === 'loading' && availablePlaceCount === 0;
   const isUnavailable = dataState !== 'loading' && availablePlaceCount === 0;
@@ -209,11 +203,21 @@ export const VisitorDashboard: React.FC<VisitorDashboardProps> = ({
               aria-label="See what Villaverde has to offer."
             >
               See what{' '}
-              <span
-                aria-hidden="true"
-                className={`inline-block min-w-[9ch] transform-gpu transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none ${rotatingBarangayClassName}`}
-              >
-                {rotatingBarangayName}
+              <span aria-hidden="true" className="relative inline-block min-w-[9ch] align-baseline">
+                {isBarangayTransitioning && (
+                  <span
+                    key={`previous-${rotatingBarangayIndex}`}
+                    className="mo-barangay-name-out pointer-events-none absolute inset-x-0 top-0 inline-block"
+                  >
+                    {previousBarangayName}
+                  </span>
+                )}
+                <span
+                  key={`current-${rotatingBarangayName}`}
+                  className={isBarangayTransitioning ? 'mo-barangay-name-in relative inline-block' : 'relative inline-block'}
+                >
+                  {rotatingBarangayName}
+                </span>
               </span>{' '}
               has to offer.
             </h1>
