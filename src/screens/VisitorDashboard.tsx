@@ -120,17 +120,44 @@ export const VisitorDashboard: React.FC<VisitorDashboardProps> = ({
   );
 
   const [rotatingBarangayIndex, setRotatingBarangayIndex] = useState(0);
+  const [barangaySwapPhase, setBarangaySwapPhase] = useState<'idle' | 'exit' | 'enter'>('idle');
 
   useEffect(() => {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let swapTimeoutId: number | undefined;
+    let enterFrameId: number | undefined;
+
     const intervalId = window.setInterval(() => {
-      setRotatingBarangayIndex((currentIndex) =>
-        (currentIndex + 1) % ROTATING_BARANGAY_NAMES.length);
+      if (prefersReducedMotion) {
+        setRotatingBarangayIndex((currentIndex) =>
+          (currentIndex + 1) % ROTATING_BARANGAY_NAMES.length);
+        return;
+      }
+
+      setBarangaySwapPhase('exit');
+      swapTimeoutId = window.setTimeout(() => {
+        setRotatingBarangayIndex((currentIndex) =>
+          (currentIndex + 1) % ROTATING_BARANGAY_NAMES.length);
+        setBarangaySwapPhase('enter');
+        enterFrameId = window.requestAnimationFrame(() => {
+          setBarangaySwapPhase('idle');
+        });
+      }, 180);
     }, 2000);
 
-    return () => window.clearInterval(intervalId);
+    return () => {
+      window.clearInterval(intervalId);
+      if (swapTimeoutId !== undefined) window.clearTimeout(swapTimeoutId);
+      if (enterFrameId !== undefined) window.cancelAnimationFrame(enterFrameId);
+    };
   }, []);
 
   const rotatingBarangayName = ROTATING_BARANGAY_NAMES[rotatingBarangayIndex];
+  const rotatingBarangayClassName = barangaySwapPhase === 'exit'
+    ? 'opacity-0 -translate-y-1.5'
+    : barangaySwapPhase === 'enter'
+      ? 'opacity-0 translate-y-1.5'
+      : 'opacity-100 translate-y-0';
   const availablePlaceCount = places.length;
   const isLoading = dataState === 'loading' && availablePlaceCount === 0;
   const isUnavailable = dataState !== 'loading' && availablePlaceCount === 0;
@@ -182,7 +209,10 @@ export const VisitorDashboard: React.FC<VisitorDashboardProps> = ({
               aria-label="See what Villaverde has to offer."
             >
               See what{' '}
-              <span aria-hidden="true" className="inline-block min-w-[9ch]">
+              <span
+                aria-hidden="true"
+                className={`inline-block min-w-[9ch] transform-gpu transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none ${rotatingBarangayClassName}`}
+              >
                 {rotatingBarangayName}
               </span>{' '}
               has to offer.
