@@ -1,0 +1,114 @@
+name: Clean VillaverdeMo Ticker Main
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/clean-mo-ticker-main.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Replace overlap with clipped vertical ticker
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('src/screens/VisitorDashboard.tsx')
+          text = path.read_text()
+
+          old_state = """  const [rotatingBarangayIndex, setRotatingBarangayIndex] = useState(0);\n  const [isBarangayTransitioning, setIsBarangayTransitioning] = useState(false);\n\n  useEffect(() => {\n    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;\n    let transitionTimeoutId: number | undefined;\n\n    const intervalId = window.setInterval(() => {\n      if (prefersReducedMotion) {\n        setRotatingBarangayIndex((currentIndex) =>\n          (currentIndex + 1) % ROTATING_BARANGAY_NAMES.length);\n        return;\n      }\n\n      setIsBarangayTransitioning(true);\n      setRotatingBarangayIndex((currentIndex) =>\n        (currentIndex + 1) % ROTATING_BARANGAY_NAMES.length);\n\n      transitionTimeoutId = window.setTimeout(() => {\n        setIsBarangayTransitioning(false);\n      }, 460);\n    }, 2000);\n\n    return () => {\n      window.clearInterval(intervalId);\n      if (transitionTimeoutId !== undefined) window.clearTimeout(transitionTimeoutId);\n    };\n  }, []);\n\n  const rotatingBarangayName = ROTATING_BARANGAY_NAMES[rotatingBarangayIndex];\n  const previousBarangayName = ROTATING_BARANGAY_NAMES[\n    (rotatingBarangayIndex - 1 + ROTATING_BARANGAY_NAMES.length) % ROTATING_BARANGAY_NAMES.length\n  ];\n"""
+
+          new_state = """  const [barangayRotation, setBarangayRotation] = useState<{\n    current: number;\n    previous: number | null;\n  }>({ current: 0, previous: null });\n\n  useEffect(() => {\n    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;\n    let transitionTimeoutId: number | undefined;\n\n    const intervalId = window.setInterval(() => {\n      setBarangayRotation((state) => ({\n        previous: prefersReducedMotion ? null : state.current,\n        current: (state.current + 1) % ROTATING_BARANGAY_NAMES.length,\n      }));\n\n      if (!prefersReducedMotion) {\n        transitionTimeoutId = window.setTimeout(() => {\n          setBarangayRotation((state) => ({ ...state, previous: null }));\n        }, 380);\n      }\n    }, 2000);\n\n    return () => {\n      window.clearInterval(intervalId);\n      if (transitionTimeoutId !== undefined) window.clearTimeout(transitionTimeoutId);\n    };\n  }, []);\n\n  const rotatingBarangayName = ROTATING_BARANGAY_NAMES[barangayRotation.current];\n  const previousBarangayName = barangayRotation.previous === null\n    ? null\n    : ROTATING_BARANGAY_NAMES[barangayRotation.previous];\n"""
+
+          if old_state not in text:
+              raise SystemExit('Could not find current crossfade state block')
+          text = text.replace(old_state, new_state, 1)
+
+          old_span = """              <span aria-hidden=\"true\" className=\"relative inline-block min-w-[9ch] align-baseline\">\n                {isBarangayTransitioning && (\n                  <span\n                    key={`previous-${rotatingBarangayIndex}`}\n                    className=\"mo-barangay-name-out pointer-events-none absolute inset-x-0 top-0 inline-block\"\n                  >\n                    {previousBarangayName}\n                  </span>\n                )}\n                <span\n                  key={`current-${rotatingBarangayName}`}\n                  className={isBarangayTransitioning ? 'mo-barangay-name-in relative inline-block' : 'relative inline-block'}\n                >\n                  {rotatingBarangayName}\n                </span>\n              </span>{' '}\n"""
+
+          new_span = """              <span aria-hidden=\"true\" className=\"mo-barangay-slot\">\n                {previousBarangayName !== null && (\n                  <span key={`previous-${previousBarangayName}`} className=\"mo-barangay-ticker-out\">\n                    {previousBarangayName}\n                  </span>\n                )}\n                <span\n                  key={`current-${rotatingBarangayName}`}\n                  className={previousBarangayName === null ? 'mo-barangay-ticker-current' : 'mo-barangay-ticker-in'}\n                >\n                  {rotatingBarangayName}\n                </span>\n              </span>{' '}\n"""
+
+          if old_span not in text:
+              raise SystemExit('Could not find current crossfade span')
+          text = text.replace(old_span, new_span, 1)
+          path.write_text(text)
+
+          css_path = Path('src/index.css')
+          css = css_path.read_text()
+          marker = '@keyframes mo-barangay-name-in {'
+          if marker in css:
+              css = css[:css.index(marker)].rstrip() + '\n'
+
+          css += r'''
+
+.mo-barangay-slot {
+  position: relative;
+  display: inline-block;
+  min-width: 9ch;
+  height: 1.05em;
+  overflow: hidden;
+  vertical-align: -0.08em;
+  line-height: 1.02;
+}
+
+.mo-barangay-ticker-current,
+.mo-barangay-ticker-in,
+.mo-barangay-ticker-out {
+  position: absolute;
+  inset: 0 auto auto 0;
+  display: block;
+  white-space: nowrap;
+  will-change: transform, opacity;
+}
+
+.mo-barangay-ticker-current {
+  transform: translate3d(0, 0, 0);
+  opacity: 1;
+}
+
+@keyframes mo-barangay-ticker-in {
+  from { transform: translate3d(0, 105%, 0); opacity: 0.5; }
+  to { transform: translate3d(0, 0, 0); opacity: 1; }
+}
+
+@keyframes mo-barangay-ticker-out {
+  from { transform: translate3d(0, 0, 0); opacity: 1; }
+  to { transform: translate3d(0, -105%, 0); opacity: 0.5; }
+}
+
+.mo-barangay-ticker-in,
+.mo-barangay-ticker-out {
+  animation-duration: 360ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: both;
+}
+
+.mo-barangay-ticker-in { animation-name: mo-barangay-ticker-in; }
+.mo-barangay-ticker-out { animation-name: mo-barangay-ticker-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mo-barangay-ticker-in,
+  .mo-barangay-ticker-out { animation: none; }
+}
+'''
+          css_path.write_text(css)
+
+      - name: Verify
+        run: npm ci && npm run verify
+
+      - name: Commit ticker fix
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/screens/VisitorDashboard.tsx src/index.css
+          git commit -m "fix: use clipped vertical barangay ticker"
+          git push
