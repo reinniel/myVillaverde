@@ -1,0 +1,47 @@
+name: Restore VillaverdeMo Copy
+
+on:
+  push:
+    branches:
+      - fix/restore-mo-visitor-copy
+    paths:
+      - .github/workflows/restore-mo-copy.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore visitor copy
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('src/screens/VisitorDashboard.tsx')
+          text = path.read_text()
+          replacements = [
+              ('Visitor discovery guide', 'Visitor & tourist guide'),
+              ('Find a real place for your next stop.', 'See what Villaverde has to offer.'),
+              ('Browse Villaverde using the same live place listings, map, directions, and saved collections.', 'Discover places to visit, food to try, barangays to explore, and build a trip from the live guide.'),
+          ]
+          for old, new in replacements:
+              if old not in text:
+                  raise SystemExit(f'Missing expected copy: {old}')
+              text = text.replace(old, new, 1)
+          path.write_text(text)
+
+      - name: Verify
+        run: npm ci && npm run verify
+
+      - name: Commit copy restoration
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/screens/VisitorDashboard.tsx
+          git commit -m "fix: restore visitor-first VillaverdeMo copy"
+          git push
