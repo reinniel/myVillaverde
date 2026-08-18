@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight, Compass, Heart, LocateFixed, Map, MapPin, RefreshCw, Route, Sparkles,
   Store, Utensils, Mountain, Building2, WifiOff,
@@ -76,6 +76,17 @@ const DISCOVERY_SECTIONS: DiscoverySection[] = [
   },
 ];
 
+const ROTATING_BARANGAY_NAMES = [
+  'Bintawan',
+  'Cabuluan',
+  'Ibung',
+  'Nagbitin',
+  'Ocapon',
+  'Pieza',
+  'Poblacion',
+  'Sawmill',
+] as const;
+
 const getVisitorCategory = (id: GuideCategory['id']) =>
   VISITOR_CATEGORIES.find((category) => category.id === id);
 
@@ -108,6 +119,18 @@ export const VisitorDashboard: React.FC<VisitorDashboardProps> = ({
     [places],
   );
 
+  const [rotatingBarangayIndex, setRotatingBarangayIndex] = useState(0);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setRotatingBarangayIndex((currentIndex) =>
+        (currentIndex + 1) % ROTATING_BARANGAY_NAMES.length);
+    }, 2000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  const rotatingBarangayName = ROTATING_BARANGAY_NAMES[rotatingBarangayIndex];
   const availablePlaceCount = places.length;
   const isLoading = dataState === 'loading' && availablePlaceCount === 0;
   const isUnavailable = dataState !== 'loading' && availablePlaceCount === 0;
@@ -154,8 +177,15 @@ export const VisitorDashboard: React.FC<VisitorDashboardProps> = ({
             <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/75">
               Visitor & tourist guide
             </p>
-            <h1 className="mt-2 font-serif-header text-[32px] font-bold leading-[1.02]">
-              See what Villaverde has to offer.
+            <h1
+              className="mt-2 font-serif-header text-[32px] font-bold leading-[1.02]"
+              aria-label="See what Villaverde has to offer."
+            >
+              See what{' '}
+              <span aria-hidden="true" className="inline-block min-w-[9ch]">
+                {rotatingBarangayName}
+              </span>{' '}
+              has to offer.
             </h1>
             <p className="mt-3 text-sm font-medium leading-5 text-white/80">
               Discover places to visit, food to try, barangays to explore, and build a trip from the live guide.
