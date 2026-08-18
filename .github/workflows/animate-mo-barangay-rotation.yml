@@ -1,0 +1,54 @@
+name: Animate VillaverdeMo Barangay Rotation
+
+on:
+  push:
+    branches:
+      - fix/animate-mo-barangay-rotation
+    paths:
+      - .github/workflows/animate-mo-barangay-rotation.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Add subtle barangay-name transition
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('src/screens/VisitorDashboard.tsx')
+          text = path.read_text()
+
+          old_state = """  const [rotatingBarangayIndex, setRotatingBarangayIndex] = useState(0);\n\n  useEffect(() => {\n    const intervalId = window.setInterval(() => {\n      setRotatingBarangayIndex((currentIndex) =>\n        (currentIndex + 1) % ROTATING_BARANGAY_NAMES.length);\n    }, 2000);\n\n    return () => window.clearInterval(intervalId);\n  }, []);\n\n  const rotatingBarangayName = ROTATING_BARANGAY_NAMES[rotatingBarangayIndex];\n"""
+
+          new_state = """  const [rotatingBarangayIndex, setRotatingBarangayIndex] = useState(0);\n  const [barangaySwapPhase, setBarangaySwapPhase] = useState<'idle' | 'exit' | 'enter'>('idle');\n\n  useEffect(() => {\n    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;\n    let swapTimeoutId: number | undefined;\n    let enterFrameId: number | undefined;\n\n    const intervalId = window.setInterval(() => {\n      if (prefersReducedMotion) {\n        setRotatingBarangayIndex((currentIndex) =>\n          (currentIndex + 1) % ROTATING_BARANGAY_NAMES.length);\n        return;\n      }\n\n      setBarangaySwapPhase('exit');\n      swapTimeoutId = window.setTimeout(() => {\n        setRotatingBarangayIndex((currentIndex) =>\n          (currentIndex + 1) % ROTATING_BARANGAY_NAMES.length);\n        setBarangaySwapPhase('enter');\n        enterFrameId = window.requestAnimationFrame(() => {\n          setBarangaySwapPhase('idle');\n        });\n      }, 180);\n    }, 2000);\n\n    return () => {\n      window.clearInterval(intervalId);\n      if (swapTimeoutId !== undefined) window.clearTimeout(swapTimeoutId);\n      if (enterFrameId !== undefined) window.cancelAnimationFrame(enterFrameId);\n    };\n  }, []);\n\n  const rotatingBarangayName = ROTATING_BARANGAY_NAMES[rotatingBarangayIndex];\n  const rotatingBarangayClassName = barangaySwapPhase === 'exit'\n    ? 'opacity-0 -translate-y-1.5'\n    : barangaySwapPhase === 'enter'\n      ? 'opacity-0 translate-y-1.5'\n      : 'opacity-100 translate-y-0';\n"""
+
+          if old_state not in text:
+              raise SystemExit('Could not find current barangay rotation state block')
+          text = text.replace(old_state, new_state, 1)
+
+          old_span = """              <span aria-hidden=\"true\" className=\"inline-block min-w-[9ch]\">\n                {rotatingBarangayName}\n              </span>{' '}\n"""
+
+          new_span = """              <span\n                aria-hidden=\"true\"\n                className={`inline-block min-w-[9ch] transform-gpu transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none ${rotatingBarangayClassName}`}\n              >\n                {rotatingBarangayName}\n              </span>{' '}\n"""
+
+          if old_span not in text:
+              raise SystemExit('Could not find rotating barangay name span')
+          text = text.replace(old_span, new_span, 1)
+          path.write_text(text)
+
+      - name: Verify
+        run: npm ci && npm run verify
+
+      - name: Commit animation
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/screens/VisitorDashboard.tsx
+          git commit -m "fix: animate VillaverdeMo barangay swaps"
+          git push
